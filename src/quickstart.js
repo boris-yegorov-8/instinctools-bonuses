@@ -5,10 +5,10 @@ var googleAuth = require('google-auth-library');
 
 // If modifying these scopes, delete your previously saved credentials
 var SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
-var TOKEN_PATH = process.cwd() + '/credentials.json';
+var TOKEN_PATH = process.cwd() + '/credentials/credentials.json';
 
 // Load client secrets from a local file.
-fs.readFile(process.cwd() + '/client_secret.json', function processClientSecrets(err, content) {
+fs.readFile(process.cwd() + '/credentials/client_secret.json', function processClientSecrets(err, content) {
   if (err) {
     console.log('Error loading client secret file: ' + err);
     return;
@@ -26,9 +26,9 @@ fs.readFile(process.cwd() + '/client_secret.json', function processClientSecrets
  * @param {function} callback The callback to call with the authorized client.
  */
 function authorize(credentials, callback) {
-  var clientSecret = credentials.web.client_secret;
-  var clientId = credentials.web.client_id;
-  var redirectUrl = credentials.web.redirect_uris[0];
+  var clientSecret = credentials.installed.client_secret;
+  var clientId = credentials.installed.client_id;
+  var redirectUrl = credentials.installed.redirect_uris[0];
   var auth = new googleAuth();
   var oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUrl);
 
