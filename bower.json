@@ -8,7 +8,8 @@
   ],
   "dependencies": {
     "purescript-prelude": "^2.1.0",
-    "purescript-console": "^2.0.0"
+    "purescript-console": "^2.0.0",
+    "purescript-foreign": "^3.0.1"
   },
   "devDependencies": {
     "purescript-psci-support": "^2.0.0"
