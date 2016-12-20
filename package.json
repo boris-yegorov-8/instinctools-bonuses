@@ -1,0 +1,25 @@
+{
+  "name": "instinctools-bonuses",
+  "version": "1.0.0",
+  "description": "Synchronize info about the staff's bonuses from C1 with a google sheet",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-boris-yegorov-8:boris-yegorov-8/instinctools-bonuses.git"
+  },
+  "keywords": [
+    "PureScript"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "google-auth-library": "^0.9.10",
+    "googleapis": "^15.0.0"
+  }
+}
