@@ -1,11 +1,10 @@
 module Main where
 
-import Data.Show (class Show, show)
+import Data.Show (class Show)
 import Data.Unit (Unit)
 import Data.Function (($), (#))
 import Control.Semigroupoid ((<<<))
-import Data.Semigroup ((<>))
-import Data.Array (head)
+import Data.Array (head, fold)
 import Data.Maybe (fromMaybe)
 import Control.Applicative (pure)
 import Control.Bind (bind, (>=>))
@@ -23,8 +22,15 @@ import Data.Foreign.Index (prop)
 data Credentials = Credentials String String String
 
 instance showFoo :: Show Credentials where
-  show (Credentials clientId clientSecret redirectUri) =
-    "(Credentials " <> show clientId <> " " <> show clientSecret <> " " <> show redirectUri <> ")"
+  show (Credentials clientId clientSecret redirectUri) = fold [
+      "(Credentials ",
+      clientId,
+      " ",
+      clientSecret,
+      " ",
+      redirectUri,
+      ")"
+    ]
 
 firstRedirectUri :: Array String -> String
 firstRedirectUri = (fromMaybe "http://localhost") <<< head
