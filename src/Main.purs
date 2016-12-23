@@ -1,8 +1,11 @@
 module Main where
 
-import Prelude (Unit, ($))
-
-import Control.Bind ((=<<))
+import Data.Show (class Show, show)
+import Data.Unit (Unit)
+import Data.Function (($), (#))
+import Data.Semigroup ((<>))
+import Control.Applicative (pure)
+import Control.Bind (bind, (>=>))
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, logShow)
 import Control.Monad.Eff.Exception (EXCEPTION)
@@ -40,7 +43,4 @@ instance fooIsForeign :: IsForeign Foo where
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
   -- log =<< readTextFile UTF8 "./credentials/client_secret.json"
-  logShow $ runExcept $ readJSON """{ "x": 1, "y": 2 }""" :: F {
-      x :: Number
-      y :: Number
-    }
+  logShow $ runExcept $ readJSON """{ "foo": { "bar": "bar", "baz": 1 } }""" :: F Foo
