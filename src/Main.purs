@@ -19,6 +19,8 @@ import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readJSON, readProp)
 import Data.Foreign.Index (prop)
 
+import Auth (createClient)
+
 data Credentials = Credentials String String String
 
 instance showFoo :: Show Credentials where
@@ -44,5 +46,6 @@ instance fooIsForeign :: IsForeign Credentials where
 
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
-  logShow $ runExcept $ readJSON clientSecret :: F Credentials
+  logShow $ (createClient "42").a
+  -- clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
+  -- logShow $ runExcept $ readJSON clientSecret :: F Credentials
