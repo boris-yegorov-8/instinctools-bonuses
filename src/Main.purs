@@ -19,28 +19,19 @@ import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readJSON, readProp)
 import Data.Foreign.Index (prop)
 
-data Foo = Foo Bar Baz
+data Installed = Installed String String
 
-data Bar = Bar String
+instance showFoo :: Show Installed where
+  show (Installed bar baz) = "(Installed " <> show bar <> " " <> show baz <> ")"
 
-data Baz = Baz Number
-
-instance showFoo :: Show Foo where
-  show (Foo bar baz) = "(Foo " <> show bar <> " " <> show baz <> ")"
-
-instance showBar :: Show Bar where
-  show (Bar s) = "(Bar " <> show s <> ")"
-
-instance showBaz :: Show Baz where
-  show (Baz n) = "(Baz " <> show n <> ")"
-
-instance fooIsForeign :: IsForeign Foo where
+instance fooIsForeign :: IsForeign Installed where
   read value = do
     s <- value # (prop "foo" >=> readProp "bar")
     n <- value # (prop "foo" >=> readProp "baz")
-    pure $ Foo (Bar s) (Baz n)
+    pure $ Installed s n
 
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  -- log =<< readTextFile UTF8 "./credentials/client_secret.json"
-  logShow $ runExcept $ readJSON """{ "foo": { "bar": "bar", "baz": 1 } }""" :: F Foo
+  -- clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
+  -- logShow clientSecret
+  logShow $ runExcept $ readJSON """{ "foo": { "bar": "bar", "baz": "1" } }""" :: F Installed
