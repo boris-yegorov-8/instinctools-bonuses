@@ -3,6 +3,7 @@ module Main where
 import Data.Show (class Show, show)
 import Data.Unit (Unit)
 import Data.Function (($), (#))
+import Control.Semigroupoid ((<<<))
 import Data.Semigroup ((<>))
 import Data.Array (head)
 import Data.Maybe (fromMaybe)
@@ -25,12 +26,15 @@ instance showFoo :: Show Credentials where
   show (Credentials clientId clientSecret redirectUri) =
     "(Credentials " <> show clientId <> " " <> show clientSecret <> " " <> show redirectUri <> ")"
 
+firstRedirectUri :: Array String -> String
+firstRedirectUri = (fromMaybe "http://localhost") <<< head
+
 instance fooIsForeign :: IsForeign Credentials where
   read value = do
     clientId <- value # (prop "installed" >=> readProp "client_id")
     clientSecret <- value # (prop "installed" >=> readProp "client_secret")
     redirectUris <- value # (prop "installed" >=> readProp "redirect_uris")
-    pure $ Credentials clientId clientSecret $ fromMaybe "http://localhost" $ head redirectUris
+    pure $ Credentials clientId clientSecret $ firstRedirectUri redirectUris
 
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
