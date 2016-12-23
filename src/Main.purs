@@ -20,6 +20,7 @@ import Data.Foreign.Class (class IsForeign, readJSON, readProp)
 import Data.Foreign.Index (prop)
 
 import Auth (createClient)
+import Gmail (users)
 
 data Credentials = Credentials String String String
 
@@ -46,6 +47,6 @@ instance fooIsForeign :: IsForeign Credentials where
 
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  logShow $ (createClient "42").a
+  logShow $ users $ createClient "42"
   -- clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
   -- logShow $ runExcept $ readJSON clientSecret :: F Credentials
