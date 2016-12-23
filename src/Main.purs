@@ -19,19 +19,20 @@ import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readJSON, readProp)
 import Data.Foreign.Index (prop)
 
-data Installed = Installed String String
+data Credentials = Credentials String String (Array String)
 
-instance showFoo :: Show Installed where
-  show (Installed bar baz) = "(Installed " <> show bar <> " " <> show baz <> ")"
+instance showFoo :: Show Credentials where
+  show (Credentials clientId clientSecret redirectUris) =
+    "(Credentials " <> show clientId <> " " <> show clientSecret <> " " <> show redirectUris <> ")"
 
-instance fooIsForeign :: IsForeign Installed where
+instance fooIsForeign :: IsForeign Credentials where
   read value = do
-    s <- value # (prop "foo" >=> readProp "bar")
-    n <- value # (prop "foo" >=> readProp "baz")
-    pure $ Installed s n
+    clientId <- value # (prop "installed" >=> readProp "client_id")
+    clientSecret <- value # (prop "installed" >=> readProp "client_secret")
+    redirectUris <- value # (prop "installed" >=> readProp "redirect_uris")
+    pure $ Credentials clientId clientSecret redirectUris
 
 main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  -- clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
-  -- logShow clientSecret
-  logShow $ runExcept $ readJSON """{ "foo": { "bar": "bar", "baz": "1" } }""" :: F Installed
+  clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
+  logShow $ runExcept $ readJSON clientSecret :: F Credentials
