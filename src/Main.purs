@@ -20,7 +20,7 @@ import Data.Foreign.Class (class IsForeign, readJSON, readProp)
 import Data.Foreign.Index (prop)
 
 import Auth (createClient)
-import Gmail (users)
+import Gmail (GmailEff, users)
 
 data Credentials = Credentials String String String
 
@@ -45,8 +45,8 @@ instance fooIsForeign :: IsForeign Credentials where
     redirectUris <- value # (prop "installed" >=> readProp "redirect_uris")
     pure $ Credentials clientId clientSecret $ firstRedirectUri redirectUris
 
-main :: forall e. Eff (console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
+main :: forall e. Eff (users :: GmailEff, console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  logShow $ users $ createClient "42"
+  users logShow
   -- clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
   -- logShow $ runExcept $ readJSON clientSecret :: F Credentials
