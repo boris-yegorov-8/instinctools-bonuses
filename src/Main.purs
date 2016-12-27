@@ -1,5 +1,6 @@
 module Main where
 
+import Data.Function (($))
 import Data.Unit (Unit)
 import Control.Bind (bind)
 import Control.Monad.Eff (Eff)
