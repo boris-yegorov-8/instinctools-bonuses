@@ -26,7 +26,6 @@ instance showFoo :: Show ClientSecret where
 firstRedirectUri :: Array String -> String
 firstRedirectUri = (fromMaybe "http://localhost") <<< head
 
--- TODO: remove duplication
 instance fooIsForeign :: IsForeign ClientSecret where
   read value = do
     clientId <- value # (prop "installed" >=> readProp "client_id")

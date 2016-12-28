@@ -27,7 +27,6 @@ instance showToken :: Show Token where
       " })"
     ]
 
--- TODO: remove duplication
 instance tokenIsForeign :: IsForeign Token where
   read value = do
     access_token <- readProp "access_token" value

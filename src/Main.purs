@@ -18,10 +18,13 @@ import Credentials.Token (Token)
 import Auth (createClient)
 import Gmail (GmailEff, users)
 
--- TODO: remove duplication
+readTextFileUtf8 :: forall t.
+  String -> Eff (fs :: FS, err :: EXCEPTION | t) String
+readTextFileUtf8 = readTextFile UTF8
+
 main :: forall e. Eff (users :: GmailEff, console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
-  token <- readTextFile UTF8 "./credentials/credentials.json"
+  clientSecret <- readTextFileUtf8 "./credentials/client_secret.json"
+  token <- readTextFileUtf8 "./credentials/credentials.json"
   -- logShow $ runExcept $ readJSON clientSecret :: F ClientSecret
   logShow $ runExcept $ readJSON token :: F Token
