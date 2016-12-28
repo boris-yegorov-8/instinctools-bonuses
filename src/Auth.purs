@@ -1,3 +1,14 @@
-module Auth (createClient) where
+module Auth (Options, Oauth2Client, createClient) where
 
-foreign import createClient :: String -> { a :: Number, b :: Number }
+import Credentials.Token (TokenObject)
+
+foreign import data Oauth2Client :: *
+
+type Options = {
+  client_id :: String,
+  client_secret :: String,
+  redirect_uri :: String,
+  token :: TokenObject
+}
+
+foreign import createClient :: Options -> Oauth2Client

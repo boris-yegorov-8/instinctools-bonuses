@@ -1,4 +1,4 @@
-module Credentials.Token (Token) where
+module Credentials.Token (Token, TokenObject) where
 
 import Data.Array (fold)
 import Data.Show (class Show, show)
@@ -7,12 +7,14 @@ import Control.Applicative (pure)
 import Data.Function (($))
 import Control.Bind (bind)
 
-data Token = Token {
+type TokenObject = {
   access_token :: String,
   refresh_token :: String,
   token_type :: String,
   expiry_date :: Number
 }
+
+data Token = Token TokenObject
 
 instance showToken :: Show Token where
   show (Token o) = fold [

@@ -24,7 +24,8 @@ readTextFileUtf8 = readTextFile UTF8
 
 main :: forall e. Eff (users :: GmailEff, console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
-  clientSecret <- readTextFileUtf8 "./credentials/client_secret.json"
-  token <- readTextFileUtf8 "./credentials/credentials.json"
-  -- logShow $ runExcept $ readJSON clientSecret :: F ClientSecret
-  logShow $ runExcept $ readJSON token :: F Token
+  clientSecretContent <- readTextFileUtf8 "./credentials/client_secret.json"
+  tokenContent <- readTextFileUtf8 "./credentials/credentials.json"
+  clientSecret <- runExcept $ readJSON clientSecretContent :: F ClientSecret
+  logShow clientSecret
+  -- logShow $ runExcept $ readJSON token :: F Token
