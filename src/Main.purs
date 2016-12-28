@@ -14,12 +14,14 @@ import Data.Foreign (F)
 import Data.Foreign.Class (readJSON)
 
 import Credentials.ClientSecret (ClientSecret)
+import Credentials.Token (Token)
 import Auth (createClient)
 import Gmail (GmailEff, users)
 
-
-
+-- TODO: remove duplication
 main :: forall e. Eff (users :: GmailEff, console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
 main = do
   clientSecret <- readTextFile UTF8 "./credentials/client_secret.json"
-  logShow $ runExcept $ readJSON clientSecret :: F ClientSecret
+  token <- readTextFile UTF8 "./credentials/credentials.json"
+  -- logShow $ runExcept $ readJSON clientSecret :: F ClientSecret
+  logShow $ runExcept $ readJSON token :: F Token

@@ -1,10 +1,17 @@
 module Credentials.Token (Token) where
 
+import Data.Array (fold)
+import Data.Show (class Show, show)
+import Data.Foreign.Class (class IsForeign, readProp)
+import Control.Applicative (pure)
+import Data.Function (($))
+import Control.Bind (bind)
+
 data Token = Token {
-  access_token :: String
-  refresh_token :: String
-  token_type :: String
-  expiry_date :: Int
+  access_token :: String,
+  refresh_token :: String,
+  token_type :: String,
+  expiry_date :: Number
 }
 
 instance showToken :: Show Token where
@@ -16,7 +23,7 @@ instance showToken :: Show Token where
       ", token_type: ",
       o.token_type,
       ", expiry_date: ",
-      o.expiry_date,
+      show o.expiry_date,
       " })"
     ]
 
