@@ -1,4 +1,4 @@
-module Credentials.ClientSecret (ClientSecret) where
+module Credentials.ClientSecret (ClientSecret(..)) where
 
 import Data.Array (head, fold)
 import Control.Semigroupoid ((<<<))

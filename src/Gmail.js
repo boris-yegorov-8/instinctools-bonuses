@@ -4,10 +4,15 @@ var gmail = {
   }
 };
 
-exports.users = function(callback) {
-  return function() {
-    gmail.users(function(p) {
-      callback(p)();
-    });
+exports.users = function(oauth2Client) {
+  console.log('oauth2Client');
+  console.log(oauth2Client);
+  console.log('oauth2Client');
+  return function(callback) {
+    return function() {
+      gmail.users(function(p) {
+        callback(p)();
+      });
+    };
   };
 };

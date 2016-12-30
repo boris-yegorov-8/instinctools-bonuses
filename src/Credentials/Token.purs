@@ -1,4 +1,4 @@
-module Credentials.Token (Token, TokenObject) where
+module Credentials.Token (Token(..), TokenObject) where
 
 import Data.Array (fold)
 import Data.Show (class Show, show)
