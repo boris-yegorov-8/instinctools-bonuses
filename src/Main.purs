@@ -1,27 +1,28 @@
 module Main where
 
-import Data.Function (($))
-import Data.Unit (Unit)
+import Auth (Options, createClient)
 import Control.Bind (bind)
+import Control.Monad.Aff (Aff, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, logShow, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
+import Control.Semigroupoid ((<<<))
+import Credentials.ClientSecret (ClientSecret(..))
+import Credentials.Token (Token(..))
+import Data.Either (Either(..))
+import Data.Foreign (F, ForeignError)
+import Data.Foreign.Class (readJSON)
+import Data.Function (($), (#))
+import Data.List.NonEmpty (NonEmptyList)
+import Data.Semigroup ((<>))
+import Data.Show (show)
+import Data.Tuple (Tuple(..))
+import Data.Unit (Unit)
+import Gmail (GmailEff, users)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
-import Data.Foreign (F, ForeignError)
-import Data.Foreign.Class (readJSON)
-import Data.Either (Either(..))
-import Data.Tuple (Tuple(..))
-import Data.List.NonEmpty (NonEmptyList)
--- import Control.Semigroupoid ((<<<))
-import Control.Monad.Aff (Aff, runAff)
-
-import Credentials.ClientSecret (ClientSecret(..))
-import Credentials.Token (Token(..))
-import Auth (Options, createClient)
-import Gmail (GmailEff, users)
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
@@ -42,7 +43,9 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
-main = runAff logShow logShow (readTextFileUtf8 "./credentials/client_secret.json")
+main = (readTextFileUtf8 "./credentials/client_secret1.json") # runAff
+  (log <<< ((<>) "Loading client secret file failed: ") <<< show)
+  logShow
   -- tokenContent <- readTextFileUtf8 "./credentials/credentials.json"
   -- case credentialsFromJson clientSecretContent tokenContent of
   --   Tuple (Right clientSecret) (Right token) ->
