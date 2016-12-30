@@ -42,12 +42,7 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
--- main :: forall e. Eff (users :: GmailEff, console :: CONSOLE, err :: EXCEPTION, fs :: FS | e) Unit
-main = do
-  runAff
-    logShow
-    logShow
-    (readTextFileUtf8 "./credentials/client_secret.json")
+main = runAff logShow logShow (readTextFileUtf8 "./credentials/client_secret.json")
   -- tokenContent <- readTextFileUtf8 "./credentials/credentials.json"
   -- case credentialsFromJson clientSecretContent tokenContent of
   --   Tuple (Right clientSecret) (Right token) ->
