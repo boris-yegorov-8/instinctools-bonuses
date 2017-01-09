@@ -2,8 +2,9 @@ module Main where
 
 import Auth (Options, createClient)
 import Control.Bind (bind)
-import Control.Monad.Aff (Aff, runAff)
+import Control.Monad.Aff (Aff, attempt, launchAff)
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, logShow, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
@@ -43,9 +44,19 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
-main = (readTextFileUtf8 "./credentials/client_secret1.json") # runAff
-  (log <<< ((<>) "Loading client secret file failed: ") <<< show)
-  logShow
+main = launchAff do
+  eitherClientSecretContent <- attempt $ readTextFileUtf8 clientSecretPath
+  case eitherClientSecretContent of
+    Right clientSecretContent -> do
+      eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
+      case eitherTokenContent of
+        Right tokenContent -> liftEff $ logShow eitherTokenContent
+        Left _ -> liftEff $ log "Authorize this app by visiting this url: "
+    Left err ->
+      liftEff $ log ("Loading client secret file failed: " <> (show err))
+  where
+    clientSecretPath = "./credentials/client_secret.json"
+    tokenPath = "./credentials/credentials.json"
   -- tokenContent <- readTextFileUtf8 "./credentials/credentials.json"
   -- case credentialsFromJson clientSecretContent tokenContent of
   --   Tuple (Right clientSecret) (Right token) ->
