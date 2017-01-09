@@ -44,23 +44,25 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
+foo credentials = case credentials of
+  Tuple (Right clientSecret) (Right token) ->
+    users
+      (createClient $ credentialsToAuthOptions clientSecret token)
+      logShow
+  Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
+  Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
+
 main = launchAff do
   eitherClientSecretContent <- attempt $ readTextFileUtf8 clientSecretPath
   case eitherClientSecretContent of
     Right clientSecretContent -> do
       eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
       case eitherTokenContent of
-        Right tokenContent -> liftEff $ logShow eitherTokenContent
+        Right tokenContent ->
+          liftEff $ foo $ credentialsFromJson clientSecretContent tokenContent
         Left _ -> liftEff $ log "Authorize this app by visiting this url: "
     Left err ->
       liftEff $ log ("Loading client secret file failed: " <> (show err))
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials.json"
-  -- tokenContent <- readTextFileUtf8 "./credentials/credentials.json"
-  -- case credentialsFromJson clientSecretContent tokenContent of
-  --   Tuple (Right clientSecret) (Right token) ->
-  --     users
-  --       (createClient $ credentialsToAuthOptions clientSecret token)
-  --       logShow
-  --   _ -> log "Wrong credentials"
