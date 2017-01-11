@@ -2,22 +2,21 @@ module Main where
 
 import Auth (Options, createClient)
 import Control.Bind (bind)
-import Control.Monad.Aff (Aff, attempt, launchAff)
+import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, logShow, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
-import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
 import Credentials.Token (Token(..))
 import Data.Either (Either(..))
 import Data.Foreign (F, ForeignError)
 import Data.Foreign.Class (readJSON)
-import Data.Function (($), (#))
+import Data.Function (($))
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Semigroup ((<>))
-import Data.Show (show)
+import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
 import Data.Unit (Unit)
 import Gmail (GmailEff, users)
@@ -44,6 +43,16 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
+foo :: forall t e0 e1.
+  ( Show e0
+  , Show e1
+  ) => Tuple (Either e0 ClientSecret) (Either e1 Token)
+       -> Eff
+            ( users :: GmailEff
+            , console :: CONSOLE
+            | t
+            )
+            Unit
 foo credentials = case credentials of
   Tuple (Right clientSecret) (Right token) ->
     users
@@ -52,6 +61,21 @@ foo credentials = case credentials of
   Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
   Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
 
+main :: forall t.
+  Eff
+    ( err :: EXCEPTION
+    , fs :: FS
+    , users :: GmailEff
+    , console :: CONSOLE
+    | t
+    )
+    (Canceler
+       ( fs :: FS
+       , users :: GmailEff
+       , console :: CONSOLE
+       | t
+       )
+    )
 main = launchAff do
   eitherClientSecretContent <- attempt $ readTextFileUtf8 clientSecretPath
   case eitherClientSecretContent of
