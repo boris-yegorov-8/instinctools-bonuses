@@ -21,5 +21,5 @@ type GetMessagesEff eff = Eff (getMessages :: GmailEff | eff) Unit
 foreign import data GmailEff :: !
 foreign import getMessages :: forall eff.
                         GmailOptions
-                     -> (Number -> Array {id :: String} -> GetMessagesEff eff)
+                     -> (String -> Array {id :: String} -> GetMessagesEff eff)
                      -> GetMessagesEff eff

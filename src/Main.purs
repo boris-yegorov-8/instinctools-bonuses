@@ -44,13 +44,14 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
-showMessages :: forall t.
-    Number
- -> Array {id :: String}      
+showMessageIds :: forall t.
+    String
+ -> Array {id :: String}
  -> Eff (console :: CONSOLE | t) Unit
-showMessages _ messages = log $ show ((\a -> a.id) <$> messages)
+showMessageIds "" messages = log $ show ((\message -> message.id) <$> messages)
+showMessageIds err _ = log ("Gmail API failed: " <> err)
 
-foo :: forall t e0 e1.
+onLocalCredentialsRead :: forall t e0 e1.
   ( Show e0
   , Show e1
   ) => Tuple (Either e0 ClientSecret) (Either e1 Token)
@@ -60,7 +61,7 @@ foo :: forall t e0 e1.
             | t
             )
             Unit
-foo credentials = case credentials of
+onLocalCredentialsRead credentials = case credentials of
   Tuple (Right clientSecret) (Right token) ->
     let
       gmailOptions = {
@@ -69,7 +70,7 @@ foo credentials = case credentials of
         q: "subject:Позиции"
       }
     in
-      getMessages gmailOptions showMessages
+      getMessages gmailOptions showMessageIds
   Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
   Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
 
@@ -95,7 +96,8 @@ main = launchAff do
       eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
       case eitherTokenContent of
         Right tokenContent ->
-          liftEff $ foo $ credentialsFromJson clientSecretContent tokenContent
+          liftEff $ onLocalCredentialsRead
+                  $ credentialsFromJson clientSecretContent tokenContent
         Left _ -> liftEff $ log "Authorize this app by visiting this url: "
     Left err ->
       liftEff $ log ("Loading client secret file failed: " <> (show err))
