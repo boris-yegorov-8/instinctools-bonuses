@@ -1,4 +1,9 @@
-module Gmail (GmailEff, GmailOptions, GetMessagesEff, getMessages) where
+module Gmail (
+  GmailEff,
+  GmailOptions,
+  GetMessagesEff,
+  getMessages
+) where
 
 import Data.Unit (Unit)
 import Control.Monad.Eff (Eff)
@@ -16,5 +21,5 @@ type GetMessagesEff eff = Eff (getMessages :: GmailEff | eff) Unit
 foreign import data GmailEff :: !
 foreign import getMessages :: forall eff.
                         GmailOptions
-                     -> (Number -> Number -> GetMessagesEff eff)
+                     -> (Number -> Array {id :: String} -> GetMessagesEff eff)
                      -> GetMessagesEff eff

@@ -23,6 +23,7 @@ import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
+import Data.Functor ((<$>))
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
@@ -43,6 +44,12 @@ credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
   token: t
 }
 
+showMessages :: forall t.
+    Number
+ -> Array {id :: String}      
+ -> Eff (console :: CONSOLE | t) Unit
+showMessages _ messages = log $ show ((\a -> a.id) <$> messages)
+
 foo :: forall t e0 e1.
   ( Show e0
   , Show e1
@@ -62,7 +69,7 @@ foo credentials = case credentials of
         q: "subject:Позиции"
       }
     in
-      getMessages gmailOptions (\a b -> log ((show a) <> " " <> (show b)))
+      getMessages gmailOptions showMessages
   Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
   Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
 
