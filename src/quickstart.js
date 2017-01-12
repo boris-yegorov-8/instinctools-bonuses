@@ -15,7 +15,7 @@ fs.readFile('./credentials/client_secret.json', function processClientSecrets(er
   }
   // Authorize a client with the loaded credentials, then call the
   // Gmail API.
-  authorize(JSON.parse(content), listLabels);
+  authorize(JSON.parse(content), listMessages);
 });
 
 /**
@@ -90,25 +90,17 @@ function storeToken(token) {
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function listLabels(auth) {
+function listMessages(auth) {
   var gmail = google.gmail('v1');
-  gmail.users.labels.list({
+  gmail.users.messages.list({
     auth: auth,
     userId: 'me',
+    q: 'subject:Позиции'
   }, function(err, response) {
     if (err) {
       console.log('The API returned an error: ' + err);
       return;
     }
-    var labels = response.labels;
-    if (labels.length == 0) {
-      console.log('No labels found.');
-    } else {
-      console.log('Labels:');
-      for (var i = 0; i < labels.length; i++) {
-        var label = labels[i];
-        console.log('- %s', label.name);
-      }
-    }
+    console.log(response.messages);
   });
 }
