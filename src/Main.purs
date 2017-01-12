@@ -5,7 +5,7 @@ import Control.Bind (bind)
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, logShow, log)
+import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
 import Credentials.ClientSecret (ClientSecret(..))
@@ -19,7 +19,7 @@ import Data.Semigroup ((<>))
 import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
 import Data.Unit (Unit)
-import Gmail (GmailOptions, GmailEff, getMessages)
+import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
@@ -55,15 +55,14 @@ foo :: forall t e0 e1.
             Unit
 foo credentials = case credentials of
   Tuple (Right clientSecret) (Right token) ->
-    getMessages
-      gmailOptions
-      (\a b -> log ((show a) <> " " <> (show b)))
-    where
+    let
       gmailOptions = {
         auth: (createClient $ credentialsToAuthOptions clientSecret token),
-        userId: "me"
+        userId: "me",
         q: "subject:Позиции"
       }
+    in
+      getMessages gmailOptions (\a b -> log ((show a) <> " " <> (show b)))
   Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
   Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
 

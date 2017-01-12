@@ -6,8 +6,8 @@ var gmail = function (callback) {
 exports.getMessages = function(options) {
   return function(callback) {
     return function() {
-      gmail.users(function(p) {
-        callback(p)();
+      gmail(function(a, b) {
+        callback(a)(b)();
       });
     };
   };
