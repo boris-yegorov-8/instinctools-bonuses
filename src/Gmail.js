@@ -1,13 +1,9 @@
-var gmail = {
-  users: function (callback) {
-    callback(42);
-  }
-};
+// var gmail = require('googleapis').gmail('v1');
+var gmail = function (callback) {
+  callback(42, 73);
+}
 
-exports.users = function(oauth2Client) {
-  console.log('oauth2Client');
-  console.log(oauth2Client);
-  console.log('oauth2Client');
+exports.getMessages = function(options) {
   return function(callback) {
     return function() {
       gmail.users(function(p) {
@@ -16,3 +12,10 @@ exports.users = function(oauth2Client) {
     };
   };
 };
+// gmail.users.messages.list(options, function(err, response) {
+//   if (err) {
+//     console.log('The API returned an error');
+//     return;
+//   }
+//   console.log(response.messages);
+// });

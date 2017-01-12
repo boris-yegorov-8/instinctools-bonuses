@@ -19,7 +19,7 @@ import Data.Semigroup ((<>))
 import Data.Show (class Show, show)
 import Data.Tuple (Tuple(..))
 import Data.Unit (Unit)
-import Gmail (GmailEff, users)
+import Gmail (GmailOptions, GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
@@ -48,16 +48,22 @@ foo :: forall t e0 e1.
   , Show e1
   ) => Tuple (Either e0 ClientSecret) (Either e1 Token)
        -> Eff
-            ( users :: GmailEff
+            ( getMessages :: GmailEff
             , console :: CONSOLE
             | t
             )
             Unit
 foo credentials = case credentials of
   Tuple (Right clientSecret) (Right token) ->
-    users
-      (createClient $ credentialsToAuthOptions clientSecret token)
-      logShow
+    getMessages
+      gmailOptions
+      (\a b -> log ((show a) <> " " <> (show b)))
+    where
+      gmailOptions = {
+        auth: (createClient $ credentialsToAuthOptions clientSecret token),
+        userId: "me"
+        q: "subject:Позиции"
+      }
   Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
   Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
 
@@ -65,13 +71,13 @@ main :: forall t.
   Eff
     ( err :: EXCEPTION
     , fs :: FS
-    , users :: GmailEff
+    , getMessages :: GmailEff
     , console :: CONSOLE
     | t
     )
     (Canceler
        ( fs :: FS
-       , users :: GmailEff
+       , getMessages :: GmailEff
        , console :: CONSOLE
        | t
        )

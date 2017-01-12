@@ -1,12 +1,20 @@
-module Gmail (GmailEff, users) where
+module Gmail (GmailOptions, GmailEff, getMessages) where
 
 import Data.Unit (Unit)
 import Control.Monad.Eff (Eff)
 
 import Auth (Oauth2Client)
 
+type GmailOptions = {
+  auth :: Oauth2Client,
+  userId :: String,
+  q :: String
+}
+
+type GetMessagesEff = Eff (getMessages :: GmailEff | eff) Unit
+
 foreign import data GmailEff :: !
-foreign import users :: forall eff.
-                        Oauth2Client
-                     -> (Number -> Eff (users :: GmailEff | eff) Unit)
-                     -> Eff (users :: GmailEff | eff) Unit
+foreign import getMessages :: forall eff.
+                        GmailOptions
+                     -> (Number -> Number -> GetMessagesEff)
+                     -> GetMessagesEff
