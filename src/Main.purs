@@ -1,6 +1,6 @@
 module Main where
 
-import Auth (Options, createClient)
+import Auth (createClient, setToken)
 import Control.Bind (bind)
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
@@ -36,14 +36,6 @@ credentialsFromJson clientSecretContent tokenContent = Tuple
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
   (runExcept $ readJSON tokenContent :: F Token)
 
-credentialsToAuthOptions :: ClientSecret -> Token -> Options
-credentialsToAuthOptions (ClientSecret id secret uri) (Token t) = {
-  clientId: id,
-  clientSecret: secret,
-  redirectUri: uri,
-  token: t
-}
-
 showMessageIds :: forall t.
     String
  -> Array {id :: String}
@@ -62,10 +54,16 @@ onLocalCredentialsRead :: forall t e0 e1.
             )
             Unit
 onLocalCredentialsRead credentials = case credentials of
-  Tuple (Right clientSecret) (Right token) ->
+  Tuple (Right (ClientSecret id secret uri)) (Right (Token tokenObject)) ->
     let
+      clientWithoutToken = createClient {
+        clientId: id,
+        clientSecret: secret,
+        redirectUri: uri
+      }
+      client = setToken tokenObject
       gmailOptions = {
-        auth: (createClient $ credentialsToAuthOptions clientSecret token),
+        auth: client,
         userId: "me",
         q: "subject:Позиции"
       }

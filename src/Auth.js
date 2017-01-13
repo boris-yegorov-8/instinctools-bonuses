@@ -1,11 +1,19 @@
 var googleAuth = require('google-auth-library');
+var auth = new googleAuth();
+var oauth2Client = null;
 
 exports.createClient = function(options) {
-  var auth = new googleAuth();
+  oauth2Client = new auth.OAuth2(
+    options.clientId,
+    options.clientSecret,
+    options.redirectUrl
+  );
 
-  var oauth2Client = new auth.OAuth2(options.clientId, options.clientSecret, options.redirectUrl);
+  return oauth2Client;
+};
 
-  oauth2Client.credentials = options.token;
+exports.setToken = function (token) {
+  oauth2Client.credentials = token;
 
   return oauth2Client;
 };
