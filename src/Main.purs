@@ -40,8 +40,8 @@ showMessageIds :: forall t.
     String
  -> Array {id :: String}
  -> Eff (console :: CONSOLE | t) Unit
-showMessageIds "" messages = log $ show ((\message -> message.id) <$> messages)
-showMessageIds err _ = log ("Gmail API failed: " <> err)
+showMessageIds "" messages = log $ show $ (\message -> message.id) <$> messages
+showMessageIds err _ = log $ "Gmail API failed: " <> err
 
 onLocalCredentialsRead :: forall t e0 e1.
   ( Show e0
@@ -69,8 +69,8 @@ onLocalCredentialsRead credentials = case credentials of
       }
     in
       getMessages gmailOptions showMessageIds
-  Tuple (Left err) _ -> log ("Wrong credentials: " <> (show err))
-  Tuple _ (Left err) -> log ("Wrong credentials: " <> (show err))
+  Tuple (Left err) _ -> log $ "Wrong credentials: " <> show err
+  Tuple _ (Left err) -> log $ "Wrong credentials: " <> show err
 
 main :: forall t.
   Eff
@@ -98,7 +98,7 @@ main = launchAff do
                   $ credentialsFromJson clientSecretContent tokenContent
         Left _ -> liftEff $ log "Authorize this app by visiting this url: "
     Left err ->
-      liftEff $ log ("Loading client secret file failed: " <> (show err))
+      liftEff $ log $ "Loading client secret file failed: " <> show err
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials.json"
