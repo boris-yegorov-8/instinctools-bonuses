@@ -17,3 +17,9 @@ exports.setToken = function (token) {
 
   return oauth2Client;
 };
+
+exports.generateAuthUrl = function (oauth2Client) {
+  return function (options) {
+    return oauth2Client.generateAuthUrl(options);
+  };
+};

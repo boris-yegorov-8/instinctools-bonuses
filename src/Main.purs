@@ -1,6 +1,6 @@
 module Main where
 
-import Auth (createClient, setToken)
+import Auth (createClient, setToken, generateAuthUrl)
 import Control.Bind (bind)
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
@@ -14,6 +14,7 @@ import Data.Either (Either(..))
 import Data.Foreign (F, ForeignError)
 import Data.Foreign.Class (readJSON)
 import Data.Function (($))
+import Data.Functor ((<$>))
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Semigroup ((<>))
 import Data.Show (class Show, show)
@@ -23,7 +24,6 @@ import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
-import Data.Functor ((<$>))
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
@@ -70,7 +70,27 @@ onLocalCredentialsRead credentials = case credentials of
     in
       getMessages gmailOptions showMessageIds
   Tuple (Left err) _ -> log $ "Wrong credentials: " <> show err
-  Tuple _ (Left err) -> log $ "Wrong credentials: " <> show err
+  Tuple _ (Left err) -> log "Authorize this app by visiting this url: "
+
+foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
+foo clientSecretContent =
+  case runExcept $ readJSON clientSecretContent :: F ClientSecret of
+    Left err -> log $ "Wrong credentials: " <> show err
+    Right (ClientSecret id secret uri) ->
+      let
+        oauth2Client = createClient {
+          clientId: id,
+          clientSecret: secret,
+          redirectUri: uri
+        }
+        tokenOptions = {
+          access_type: "offline",
+          scope: "https://www.googleapis.com/auth/gmail.readonly"
+        }
+      in
+        log $
+          "Authorize this app by visiting this url: "
+          <> generateAuthUrl oauth2Client tokenOptions
 
 main :: forall t.
   Eff
@@ -96,9 +116,10 @@ main = launchAff do
         Right tokenContent ->
           liftEff $ onLocalCredentialsRead
                   $ credentialsFromJson clientSecretContent tokenContent
-        Left _ -> liftEff $ log "Authorize this app by visiting this url: "
+        Left _ ->
+          liftEff $ foo clientSecretContent
     Left err ->
       liftEff $ log $ "Loading client secret file failed: " <> show err
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials.json"
+    tokenPath = "./credentials/credentials1.json"

@@ -1,4 +1,10 @@
-module Auth (Options, Oauth2Client, createClient, setToken) where
+module Auth (
+  Options,
+  Oauth2Client,
+  createClient,
+  setToken,
+  generateAuthUrl
+) where
 
 import Credentials.Token (TokenObject)
 
@@ -12,3 +18,6 @@ type Options = {
 
 foreign import createClient :: Options -> Oauth2Client
 foreign import setToken :: TokenObject -> Oauth2Client
+foreign import generateAuthUrl :: Oauth2Client
+                               -> { access_type :: String, scope :: String }
+                               -> String
