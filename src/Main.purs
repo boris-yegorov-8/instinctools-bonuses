@@ -11,7 +11,7 @@ import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
 import Credentials.Token (Token(..))
-import Data.Either (Either(..), either)
+import Data.Either (Either, either)
 import Data.Foreign (F, ForeignError)
 import Data.Foreign.Class (readJSON)
 import Data.Function (($))
@@ -19,7 +19,6 @@ import Data.Functor ((<$>))
 import Data.List.NonEmpty (NonEmptyList)
 import Data.Semigroup ((<>))
 import Data.Show (class Show, show)
-import Data.Tuple (Tuple(..))
 import Data.Unit (Unit)
 import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
@@ -36,11 +35,6 @@ logError prefix = log <<< (<>) prefix <<< show
 readTextFileUtf8 :: forall eff. String -> Aff (fs :: FS | eff) String
 readTextFileUtf8 = readTextFile UTF8
 
-credentialsFromJson :: String -> String -> Tuple EitherClientSecret EitherToken
-credentialsFromJson clientSecretContent tokenContent = Tuple
-  (runExcept $ readJSON clientSecretContent :: F ClientSecret)
-  (runExcept $ readJSON tokenContent :: F Token)
-
 showMessageIds :: forall t.
     String
  -> Array {id :: String}
@@ -48,34 +42,31 @@ showMessageIds :: forall t.
 showMessageIds "" messages = log $ show $ (\message -> message.id) <$> messages
 showMessageIds err _ = log $ "Gmail API failed: " <> err
 
-onLocalCredentialsRead :: forall t e0 e1.
-  ( Show e0
-  , Show e1
-  ) => Tuple (Either e0 ClientSecret) (Either e1 Token)
-       -> Eff
-            ( getMessages :: GmailEff
-            , console :: CONSOLE
-            | t
-            )
-            Unit
-onLocalCredentialsRead credentials = case credentials of
-  Tuple (Right (ClientSecret id secret uri)) (Right (Token tokenObject)) ->
-    let
-      clientWithoutToken = Auth.createClient {
-        clientId: id,
-        clientSecret: secret,
-        redirectUri: uri
-      }
-      client = Auth.setToken tokenObject
-      gmailOptions = {
-        auth: client,
-        userId: "me",
-        q: "subject:Позиции"
-      }
-    in
-      getMessages gmailOptions showMessageIds
-  Tuple (Left err) _ -> log $ "Wrong credentials: " <> show err
-  Tuple _ (Left err) -> log "Authorize this app by visiting this url: "
+onLocalCredentialsRead :: forall e.
+  String -> String -> Eff
+    (console :: CONSOLE, getMessages :: GmailEff | e)
+    Unit
+onLocalCredentialsRead clientSecretContent tokenContent = either
+  (logError "Wrong credentials: ")
+  (\(ClientSecret id secret uri) -> either
+    (logError "Authorize this app by visiting this url: ")
+    (\(Token tokenObject) ->
+      let
+        clientWithoutToken = Auth.createClient {
+          clientId: id,
+          clientSecret: secret,
+          redirectUri: uri
+        }
+        client = Auth.setToken tokenObject
+        gmailOptions = {
+          auth: client,
+          userId: "me",
+          q: "subject:Позиции"
+        }
+      in
+        getMessages gmailOptions showMessageIds)
+    (runExcept $ readJSON tokenContent :: F Token))
+  (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
 foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
 foo clientSecretContent = either
@@ -120,7 +111,7 @@ main = launchAff do
       eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
       liftEff $ either
         (\_ -> foo clientSecretContent)
-        (onLocalCredentialsRead <<< credentialsFromJson clientSecretContent)
+        (onLocalCredentialsRead clientSecretContent)
         eitherTokenContent)
     eitherClientSecretContent
   where
