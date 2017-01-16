@@ -1,6 +1,6 @@
 module Main where
 
-import Auth (createClient, setToken, generateAuthUrl)
+import Auth as Auth
 import Control.Bind (bind)
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
@@ -56,12 +56,12 @@ onLocalCredentialsRead :: forall t e0 e1.
 onLocalCredentialsRead credentials = case credentials of
   Tuple (Right (ClientSecret id secret uri)) (Right (Token tokenObject)) ->
     let
-      clientWithoutToken = createClient {
+      clientWithoutToken = Auth.createClient {
         clientId: id,
         clientSecret: secret,
         redirectUri: uri
       }
-      client = setToken tokenObject
+      client = Auth.setToken tokenObject
       gmailOptions = {
         auth: client,
         userId: "me",
@@ -78,7 +78,7 @@ foo clientSecretContent =
     Left err -> log $ "Wrong credentials: " <> show err
     Right (ClientSecret id secret uri) ->
       let
-        oauth2Client = createClient {
+        oauth2Client = Auth.createClient {
           clientId: id,
           clientSecret: secret,
           redirectUri: uri
@@ -90,7 +90,7 @@ foo clientSecretContent =
       in
         log $
           "Authorize this app by visiting this url: "
-          <> generateAuthUrl oauth2Client tokenOptions
+          <> Auth.generateAuthUrl oauth2Client tokenOptions
 
 main :: forall t.
   Eff
@@ -122,4 +122,4 @@ main = launchAff do
       liftEff $ log $ "Loading client secret file failed: " <> show err
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials1.json"
+    tokenPath = "./credentials/credentials.json"
