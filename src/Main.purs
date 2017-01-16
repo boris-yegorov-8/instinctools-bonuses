@@ -8,9 +8,10 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Except (runExcept)
+import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
 import Credentials.Token (Token(..))
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Foreign (F, ForeignError)
 import Data.Foreign.Class (readJSON)
 import Data.Function (($))
@@ -27,6 +28,10 @@ import Node.FS.Aff (readTextFile)
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
+
+logError :: forall e err. (Show err) =>
+  String -> err -> Eff (console :: CONSOLE | e) Unit
+logError prefix = log <<< (<>) prefix <<< show
 
 readTextFileUtf8 :: forall eff. String -> Aff (fs :: FS | eff) String
 readTextFileUtf8 = readTextFile UTF8
@@ -73,24 +78,24 @@ onLocalCredentialsRead credentials = case credentials of
   Tuple _ (Left err) -> log "Authorize this app by visiting this url: "
 
 foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
-foo clientSecretContent =
-  case runExcept $ readJSON clientSecretContent :: F ClientSecret of
-    Left err -> log $ "Wrong credentials: " <> show err
-    Right (ClientSecret id secret uri) ->
-      let
-        oauth2Client = Auth.createClient {
-          clientId: id,
-          clientSecret: secret,
-          redirectUri: uri
-        }
-        tokenOptions = {
-          access_type: "offline",
-          scope: "https://www.googleapis.com/auth/gmail.readonly"
-        }
-      in
-        log $
-          "Authorize this app by visiting this url: "
-          <> Auth.generateAuthUrl oauth2Client tokenOptions
+foo clientSecretContent = either
+  (logError "Wrong credentials: ")
+  (\(ClientSecret id secret uri) ->
+    let
+      oauth2Client = Auth.createClient {
+        clientId: id,
+        clientSecret: secret,
+        redirectUri: uri
+      }
+      tokenOptions = {
+        access_type: "offline",
+        scope: "https://www.googleapis.com/auth/gmail.readonly"
+      }
+    in
+      log $
+        "Authorize this app by visiting this url: "
+        <> Auth.generateAuthUrl oauth2Client tokenOptions)
+  (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
 main :: forall t.
   Eff
@@ -109,17 +114,15 @@ main :: forall t.
     )
 main = launchAff do
   eitherClientSecretContent <- attempt $ readTextFileUtf8 clientSecretPath
-  case eitherClientSecretContent of
-    Right clientSecretContent -> do
+  either
+    (liftEff <<< logError "Loading client secret file failed: ")
+    (\clientSecretContent -> do
       eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
-      case eitherTokenContent of
-        Right tokenContent ->
-          liftEff $ onLocalCredentialsRead
-                  $ credentialsFromJson clientSecretContent tokenContent
-        Left _ ->
-          liftEff $ foo clientSecretContent
-    Left err ->
-      liftEff $ log $ "Loading client secret file failed: " <> show err
+      liftEff $ either
+        (\_ -> foo clientSecretContent)
+        (onLocalCredentialsRead <<< credentialsFromJson clientSecretContent)
+        eitherTokenContent)
+    eitherClientSecretContent
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials.json"
