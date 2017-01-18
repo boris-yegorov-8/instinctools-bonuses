@@ -35,13 +35,6 @@ logError prefix = log <<< (<>) prefix <<< show
 readTextFileUtf8 :: forall eff. String -> Aff (fs :: FS | eff) String
 readTextFileUtf8 = readTextFile UTF8
 
-createClient :: ClientSecret -> Auth.Oauth2Client
-createClient (ClientSecret id secret uri) = Auth.createClient {
-  clientId: id,
-  clientSecret: secret,
-  redirectUri: uri
-}
-
 showMessageIds :: forall t.
     String
  -> Array {id :: String}
@@ -55,11 +48,11 @@ onLocalCredentialsRead :: forall e.
     Unit
 onLocalCredentialsRead clientSecretContent tokenContent = either
   (logError "Wrong credentials: ")
-  (\clientSecret -> either
+  (\(ClientSecret clientSecretObject) -> either
     (logError "Authorize this app by visiting this url: ")
     (\(Token tokenObject) ->
       let
-        clientWithoutToken = createClient clientSecret
+        clientWithoutToken = Auth.createClient clientSecretObject
         client = Auth.setToken tokenObject
         gmailOptions = {
           auth: client,
@@ -74,8 +67,9 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
 foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
 foo clientSecretContent = either
   (logError "Wrong credentials: ")
-  (\clientSecret ->
+  (\(ClientSecret clientSecretObject) ->
     let
+      oauth2client = Auth.createClient clientSecretObject
       tokenOptions = {
         access_type: "offline",
         scope: "https://www.googleapis.com/auth/gmail.readonly"
@@ -83,7 +77,7 @@ foo clientSecretContent = either
     in
       log $
         "Authorize this app by visiting this url: "
-        <> Auth.generateAuthUrl (createClient clientSecret) tokenOptions)
+        <> Auth.generateAuthUrl oauth2client tokenOptions)
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
 main :: forall t.

@@ -1,7 +1,6 @@
-module Credentials.ClientSecret (ClientSecret(..)) where
+module Credentials.ClientSecret (ClientSecret(..), ClientSecretObject) where
 
 import Data.Array (head, fold)
-import Control.Semigroupoid ((<<<))
 import Data.Maybe (fromMaybe)
 import Control.Bind (bind, (>=>))
 import Data.Function (($), (#))
@@ -10,25 +9,32 @@ import Data.Foreign.Index (prop)
 import Data.Foreign.Class (class IsForeign, readProp)
 import Control.Applicative (pure)
 
-data ClientSecret = ClientSecret String String String
+type ClientSecretObject = {
+  clientId :: String,
+  clientSecret :: String,
+  redirectUri :: String
+}
+
+data ClientSecret = ClientSecret ClientSecretObject
 
 instance showFoo :: Show ClientSecret where
-  show (ClientSecret clientId clientSecret redirectUri) = fold [
+  show (ClientSecret o) = fold [
       "(Credentials ",
-      clientId,
+      o.clientId,
       " ",
-      clientSecret,
+      o.clientSecret,
       " ",
-      redirectUri,
+      o.redirectUri,
       ")"
     ]
-
-firstRedirectUri :: Array String -> String
-firstRedirectUri = (fromMaybe "http://localhost") <<< head
 
 instance fooIsForeign :: IsForeign ClientSecret where
   read value = do
     clientId <- value # (prop "installed" >=> readProp "client_id")
     clientSecret <- value # (prop "installed" >=> readProp "client_secret")
     redirectUris <- value # (prop "installed" >=> readProp "redirect_uris")
-    pure $ ClientSecret clientId clientSecret $ firstRedirectUri redirectUris
+    pure $ ClientSecret {
+      clientId,
+      clientSecret,
+      redirectUri: (fromMaybe "http://localhost") $ head redirectUris
+    }
