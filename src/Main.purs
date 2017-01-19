@@ -6,7 +6,7 @@ import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Exception (EXCEPTION, Error)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
@@ -32,8 +32,9 @@ logError :: forall e err. (Show err) =>
   String -> err -> Eff (console :: CONSOLE | e) Unit
 logError prefix = log <<< (<>) prefix <<< show
 
-readTextFileUtf8 :: forall eff. String -> Aff (fs :: FS | eff) String
-readTextFileUtf8 = readTextFile UTF8
+readTextFileUtf8 :: forall e.
+  String -> Aff ( fs :: FS | e) (Either Error String)
+readTextFileUtf8 = attempt <<< readTextFile UTF8
 
 showMessageIds :: forall t.
     String
@@ -95,11 +96,11 @@ main :: forall t.
        | t
        )
     )
-main = launchAff $ (attempt $ readTextFileUtf8 clientSecretPath) >>=
+main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
     (\clientSecretContent ->
-      (attempt $ readTextFileUtf8 tokenPath) >>= liftEff <<< either
+      (readTextFileUtf8 tokenPath) >>= liftEff <<< either
         (\_ -> foo clientSecretContent)
         (onLocalCredentialsRead clientSecretContent))
   where
