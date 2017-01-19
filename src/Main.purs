@@ -1,7 +1,7 @@
 module Main where
 
 import Auth as Auth
-import Control.Bind (bind)
+import Control.Bind ((>>=))
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -95,17 +95,13 @@ main :: forall t.
        | t
        )
     )
-main = launchAff do
-  eitherClientSecretContent <- attempt $ readTextFileUtf8 clientSecretPath
+main = launchAff $ (attempt $ readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
-    (\clientSecretContent -> do
-      eitherTokenContent <- attempt $ readTextFileUtf8 tokenPath
-      liftEff $ either
+    (\clientSecretContent ->
+      (attempt $ readTextFileUtf8 tokenPath) >>= liftEff <<< either
         (\_ -> foo clientSecretContent)
-        (onLocalCredentialsRead clientSecretContent)
-        eitherTokenContent)
-    eitherClientSecretContent
+        (onLocalCredentialsRead clientSecretContent))
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials.json"
