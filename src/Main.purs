@@ -1,7 +1,7 @@
 module Main where
 
 import Auth as Auth
-import Control.Bind ((>>=))
+import Control.Bind (bind, (>>=))
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -24,6 +24,7 @@ import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
+import Node.ReadLine (createConsoleInterface, setPrompt, noCompletion, prompt)
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
@@ -65,37 +66,41 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
     (runExcept $ readJSON tokenContent :: F Token))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
-foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
-foo clientSecretContent = either
-  (logError "Wrong credentials: ")
-  (\(ClientSecret clientSecretObject) ->
-    let
-      oauth2client = Auth.createClient clientSecretObject
-      tokenOptions = {
-        access_type: "offline",
-        scope: "https://www.googleapis.com/auth/gmail.readonly"
-      }
-    in
-      log $
-        "Authorize this app by visiting this url: "
-        <> Auth.generateAuthUrl oauth2client tokenOptions)
-  (runExcept $ readJSON clientSecretContent :: F ClientSecret)
+-- foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
+foo clientSecretContent = do
+  interface <- createConsoleInterface noCompletion
+  setPrompt "42" 2 interface
+  prompt interface
+-- foo clientSecretContent = either
+--   (logError "Wrong credentials: ")
+--   (\(ClientSecret clientSecretObject) ->
+--     let
+--       oauth2client = Auth.createClient clientSecretObject
+--       tokenOptions = {
+--         access_type: "offline",
+--         scope: "https://www.googleapis.com/auth/gmail.readonly"
+--       }
+--     in
+--       log $
+--         "Authorize this app by visiting this url: "
+--         <> Auth.generateAuthUrl oauth2client tokenOptions)
+--   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
-main :: forall t.
-  Eff
-    ( err :: EXCEPTION
-    , fs :: FS
-    , getMessages :: GmailEff
-    , console :: CONSOLE
-    | t
-    )
-    (Canceler
-       ( fs :: FS
-       , getMessages :: GmailEff
-       , console :: CONSOLE
-       | t
-       )
-    )
+-- main :: forall t.
+--   Eff
+--     ( err :: EXCEPTION
+--     , fs :: FS
+--     , getMessages :: GmailEff
+--     , console :: CONSOLE
+--     | t
+--     )
+--     (Canceler
+--        ( fs :: FS
+--        , getMessages :: GmailEff
+--        , console :: CONSOLE
+--        | t
+--        )
+--     )
 main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
@@ -106,3 +111,6 @@ main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials.json"
+-- main = do
+--   interface <- createConsoleInterface noCompletion
+--   setPrompt "42" 2 interface
