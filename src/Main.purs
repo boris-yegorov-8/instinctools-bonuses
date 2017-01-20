@@ -89,7 +89,6 @@ foo clientSecretContent = either
         Auth.generateAuthUrl oauth2client tokenOptions
       ) >>
       (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
--- TODO: try to make it point-free
       (\interface ->
         (ReadLine.setPrompt "> " 2 interface) >>
         (ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)) >>
@@ -99,13 +98,10 @@ foo clientSecretContent = either
 main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
--- TODO:
--- make it point-free
--- try >=>
     (\clientSecretContent ->
       (readTextFileUtf8 tokenPath) >>= liftEff <<< either
         (\_ -> foo clientSecretContent)
         (onLocalCredentialsRead clientSecretContent))
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials1.json"
+    tokenPath = "./credentials/credentials.json"
