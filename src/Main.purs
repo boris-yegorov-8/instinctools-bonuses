@@ -2,7 +2,7 @@ module Main where
 
 import Auth as Auth
 import Control.Bind (class Bind, (>>=))
-import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
+import Control.Monad.Aff (Aff, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
@@ -74,43 +74,28 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
 foo :: forall e. String -> Eff
   (console :: CONSOLE, readline :: ReadLine.READLINE, err :: EXCEPTION | e)
   Unit
-foo clientSecretContent =
-  (log "73") >>
-  (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
-  (\interface ->
-    (ReadLine.setPrompt "> " 2 interface) >>
-    (ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)) >>
-    (ReadLine.prompt interface))
--- foo clientSecretContent = either
---   (logError "Wrong credentials: ")
---   (\(ClientSecret clientSecretObject) ->
---     let
---       oauth2client = Auth.createClient clientSecretObject
---       tokenOptions = {
---         access_type: "offline",
---         scope: "https://www.googleapis.com/auth/gmail.readonly"
---       }
---     in
---       log $
---         "Authorize this app by visiting this url: "
---         <> Auth.generateAuthUrl oauth2client tokenOptions)
---   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
+foo clientSecretContent = either
+  (logError "Wrong credentials: ")
+  (\(ClientSecret clientSecretObject) ->
+    let
+      oauth2client = Auth.createClient clientSecretObject
+      tokenOptions = {
+        access_type: "offline",
+        scope: "https://www.googleapis.com/auth/gmail.readonly"
+      }
+    in
+      log (
+        "Authorize this app by visiting this url: " <>
+        Auth.generateAuthUrl oauth2client tokenOptions
+      ) >>
+      (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
+-- TODO: try to make it point-free
+      (\interface ->
+        (ReadLine.setPrompt "> " 2 interface) >>
+        (ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)) >>
+        (ReadLine.prompt interface)))
+  (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
--- main :: forall t.
---   Eff
---     ( err :: EXCEPTION
---     , fs :: FS
---     , getMessages :: GmailEff
---     , console :: CONSOLE
---     | t
---     )
---     (Canceler
---        ( fs :: FS
---        , getMessages :: GmailEff
---        , console :: CONSOLE
---        | t
---        )
---     )
 main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
@@ -124,6 +109,3 @@ main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   where
     clientSecretPath = "./credentials/client_secret.json"
     tokenPath = "./credentials/credentials1.json"
--- main = do
---   interface <- createConsoleInterface noCompletion
---   setPrompt "42" 2 interface
