@@ -56,6 +56,7 @@ onLocalCredentialsRead :: forall e.
 onLocalCredentialsRead clientSecretContent tokenContent = either
   (logError "Wrong credentials: ")
   (\(ClientSecret clientSecretObject) -> either
+-- TODO: get new token
     (logError "Authorize this app by visiting this url: ")
     (\(Token tokenObject) ->
       let
@@ -70,6 +71,8 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
         getMessages gmailOptions showMessageIds)
     (runExcept $ readJSON tokenContent :: F Token))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
+
+onNewToken interface _ = ReadLine.close interface
 
 foo :: forall e. String -> Eff
   (console :: CONSOLE, readline :: ReadLine.READLINE, err :: EXCEPTION | e)
@@ -91,7 +94,7 @@ foo clientSecretContent = either
       (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
       (\interface ->
         (ReadLine.setPrompt "> " 2 interface) >>
-        (ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)) >>
+        (ReadLine.setLineHandler interface $ onNewToken interface) >>
         (ReadLine.prompt interface)))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
@@ -104,4 +107,4 @@ main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
         (onLocalCredentialsRead clientSecretContent))
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials.json"
+    tokenPath = "./credentials/credentials1.json"

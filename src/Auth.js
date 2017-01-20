@@ -23,3 +23,15 @@ exports.generateAuthUrl = function (oauth2Client) {
     return oauth2Client.generateAuthUrl(options);
   };
 };
+
+exports.getToken = function (oauth2Client) {
+  function (code) {
+    return function(callback) {
+      return function() {
+        oauth2Client.getToken(options, function(err, token) {
+          callback(String(err || ''))(token)();
+        });
+      };
+    };
+  }
+};
