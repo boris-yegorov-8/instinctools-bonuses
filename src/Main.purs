@@ -1,7 +1,7 @@
 module Main where
 
 import Auth as Auth
-import Control.Bind (bind, (>>=))
+import Control.Bind (class Bind, (>>=))
 import Control.Monad.Aff (Aff, Canceler, attempt, launchAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -28,6 +28,11 @@ import Node.ReadLine as ReadLine
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
+
+then' :: forall m a b. (Bind m) => m a -> m b -> m b
+then' ma mb = ma >>= (\_ -> mb)
+
+infixl 1 then' as >>
 
 logError :: forall e err. (Show err) =>
   String -> err -> Eff (console :: CONSOLE | e) Unit
@@ -66,13 +71,16 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
     (runExcept $ readJSON tokenContent :: F Token))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
--- foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
-foo clientSecretContent = do
-  log "73"
-  interface <- ReadLine.createConsoleInterface ReadLine.noCompletion
-  ReadLine.setPrompt "> " 2 interface
-  ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)
-  ReadLine.prompt interface
+foo :: forall e. String -> Eff
+  (console :: CONSOLE, readline :: ReadLine.READLINE, err :: EXCEPTION | e)
+  Unit
+foo clientSecretContent =
+  (log "73") >>
+  (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
+  (\interface ->
+    (ReadLine.setPrompt "> " 2 interface) >>
+    (ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)) >>
+    (ReadLine.prompt interface))
 -- foo clientSecretContent = either
 --   (logError "Wrong credentials: ")
 --   (\(ClientSecret clientSecretObject) ->
@@ -106,6 +114,9 @@ foo clientSecretContent = do
 main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
+-- TODO:
+-- make it point-free
+-- try >=>
     (\clientSecretContent ->
       (readTextFileUtf8 tokenPath) >>= liftEff <<< either
         (\_ -> foo clientSecretContent)
