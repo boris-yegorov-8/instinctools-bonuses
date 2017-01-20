@@ -24,7 +24,7 @@ import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
-import Node.ReadLine (createConsoleInterface, setPrompt, noCompletion, prompt)
+import Node.ReadLine as ReadLine
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 type EitherToken = Either (NonEmptyList ForeignError) Token
@@ -68,9 +68,11 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
 
 -- foo :: forall e. String -> Eff (console :: CONSOLE | e) Unit
 foo clientSecretContent = do
-  interface <- createConsoleInterface noCompletion
-  setPrompt "42" 2 interface
-  prompt interface
+  log "73"
+  interface <- ReadLine.createConsoleInterface ReadLine.noCompletion
+  ReadLine.setPrompt "> " 2 interface
+  ReadLine.setLineHandler interface (\_ -> ReadLine.close interface)
+  ReadLine.prompt interface
 -- foo clientSecretContent = either
 --   (logError "Wrong credentials: ")
 --   (\(ClientSecret clientSecretObject) ->
@@ -110,7 +112,7 @@ main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
         (onLocalCredentialsRead clientSecretContent))
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials.json"
+    tokenPath = "./credentials/credentials1.json"
 -- main = do
 --   interface <- createConsoleInterface noCompletion
 --   setPrompt "42" 2 interface
