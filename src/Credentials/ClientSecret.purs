@@ -19,13 +19,13 @@ data ClientSecret = ClientSecret ClientSecretObject
 
 instance showFoo :: Show ClientSecret where
   show (ClientSecret o) = fold [
-      "(Credentials ",
+      "(Credentials { clientId: ",
       o.clientId,
-      " ",
+      ", clientSecret: ",
       o.clientSecret,
-      " ",
+      ", redirectUri: ",
       o.redirectUri,
-      ")"
+      " })"
     ]
 
 instance fooIsForeign :: IsForeign ClientSecret where

@@ -72,11 +72,19 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
     (runExcept $ readJSON tokenContent :: F Token))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
-onNewToken interface _ = ReadLine.close interface
+onNewToken "" token = log "42"
+onNewToken err _ = log err
 
-foo :: forall e. String -> Eff
-  (console :: CONSOLE, readline :: ReadLine.READLINE, err :: EXCEPTION | e)
-  Unit
+foo :: forall e.
+  String
+  -> Eff
+       ( console :: CONSOLE
+       , readline :: ReadLine.READLINE
+       , err :: EXCEPTION
+       , getToken :: Auth.AuthEff
+       | e
+       )
+       Unit
 foo clientSecretContent = either
   (logError "Wrong credentials: ")
   (\(ClientSecret clientSecretObject) ->
@@ -94,7 +102,10 @@ foo clientSecretContent = either
       (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
       (\interface ->
         (ReadLine.setPrompt "> " 2 interface) >>
-        (ReadLine.setLineHandler interface $ onNewToken interface) >>
+        (ReadLine.setLineHandler
+          interface
+          (\code -> ReadLine.close interface >>
+            Auth.getToken oauth2client code onNewToken)) >>
         (ReadLine.prompt interface)))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
@@ -107,4 +118,4 @@ main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
         (onLocalCredentialsRead clientSecretContent))
   where
     clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials1.json"
+    tokenPath = "./credentials/credentials.json"

@@ -6,7 +6,7 @@ exports.createClient = function(options) {
   oauth2Client = new auth.OAuth2(
     options.clientId,
     options.clientSecret,
-    options.redirectUrl
+    options.redirectUri
   );
 
   return oauth2Client;
@@ -25,10 +25,10 @@ exports.generateAuthUrl = function (oauth2Client) {
 };
 
 exports.getToken = function (oauth2Client) {
-  function (code) {
+  return function (code) {
     return function(callback) {
       return function() {
-        oauth2Client.getToken(options, function(err, token) {
+        oauth2Client.getToken(code, function(err, token) {
           callback(String(err || ''))(token)();
         });
       };
