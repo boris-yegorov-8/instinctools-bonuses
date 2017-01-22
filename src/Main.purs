@@ -1,8 +1,9 @@
 module Main where
 
 import Auth as Auth
+import Constants as Constants
 import Control.Bind (class Bind, (>>=))
-import Control.Monad.Aff (Aff, attempt, launchAff)
+import Control.Monad.Aff (Aff, attempt, launchAff, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
@@ -23,7 +24,7 @@ import Data.Unit (Unit)
 import Gmail (GmailEff, getMessages)
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
-import Node.FS.Aff (readTextFile)
+import Node.FS.Aff (readTextFile, writeTextFile)
 import Node.ReadLine as ReadLine
 
 type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
@@ -39,8 +40,11 @@ logError :: forall e err. (Show err) =>
 logError prefix = log <<< (<>) prefix <<< show
 
 readTextFileUtf8 :: forall e.
-  String -> Aff ( fs :: FS | e) (Either Error String)
+  String -> Aff (fs :: FS | e) (Either Error String)
 readTextFileUtf8 = attempt <<< readTextFile UTF8
+
+writeTextFileUtf8 :: forall e. String -> String -> Aff (fs :: FS | e) Unit
+writeTextFileUtf8 = writeTextFile UTF8
 
 showMessageIds :: forall t.
     String
@@ -72,8 +76,13 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
     (runExcept $ readJSON tokenContent :: F Token))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
-onNewToken "" token = log "42"
-onNewToken err _ = log err
+onNewToken :: forall e.
+  String -> String -> Eff (console :: CONSOLE, fs :: FS | e) Unit
+onNewToken "" token = (runAff
+  (logError "Getting new token failed: ")
+  (log <<< show)
+  (writeTextFileUtf8 Constants.tokenPath token)) >> log "42"
+onNewToken err _ = logError "Getting new token failed: " err
 
 foo :: forall e.
   String
@@ -82,6 +91,7 @@ foo :: forall e.
        , readline :: ReadLine.READLINE
        , err :: EXCEPTION
        , getToken :: Auth.AuthEff
+       , fs :: FS
        | e
        )
        Unit
@@ -109,13 +119,10 @@ foo clientSecretContent = either
         (ReadLine.prompt interface)))
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
-main = launchAff $ (readTextFileUtf8 clientSecretPath) >>=
+main = launchAff $ (readTextFileUtf8 Constants.clientSecretPath) >>=
   either
     (liftEff <<< logError "Loading client secret file failed: ")
     (\clientSecretContent ->
-      (readTextFileUtf8 tokenPath) >>= liftEff <<< either
+      (readTextFileUtf8 Constants.tokenPath) >>= liftEff <<< either
         (\_ -> foo clientSecretContent)
         (onLocalCredentialsRead clientSecretContent))
-  where
-    clientSecretPath = "./credentials/client_secret.json"
-    tokenPath = "./credentials/credentials.json"

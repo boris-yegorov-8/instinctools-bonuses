@@ -1,7 +1,6 @@
 module Auth (
   AuthEff,
   GetTokenEff,
-  Token,
   Options,
   Oauth2Client,
   createClient,
@@ -26,8 +25,6 @@ type GetTokenEff eff = Eff (getToken :: AuthEff | eff) Unit
 
 foreign import data AuthEff :: !
 
-foreign import data Token :: *
-
 foreign import createClient :: Options -> Oauth2Client
 
 foreign import setToken :: TokenObject -> Oauth2Client
@@ -39,5 +36,5 @@ foreign import generateAuthUrl :: Oauth2Client
 foreign import getToken :: forall eff.
                         Oauth2Client
                      -> String
-                     -> (String -> Token -> GetTokenEff eff)
+                     -> (String -> String -> GetTokenEff eff)
                      -> GetTokenEff eff
