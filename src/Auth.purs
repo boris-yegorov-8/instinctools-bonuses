@@ -9,6 +9,7 @@ module Auth (
   getToken
 ) where
 
+import Data.Argonaut.Core (Json)
 import Data.Unit (Unit)
 import Control.Monad.Eff (Eff)
 import Credentials.Token (TokenObject)
@@ -36,5 +37,5 @@ foreign import generateAuthUrl :: Oauth2Client
 foreign import getToken :: forall eff.
                         Oauth2Client
                      -> String
-                     -> (String -> String -> GetTokenEff eff)
+                     -> (String -> Json -> GetTokenEff eff)
                      -> GetTokenEff eff

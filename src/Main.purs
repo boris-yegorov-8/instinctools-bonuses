@@ -12,6 +12,7 @@ import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
 import Credentials.Token (Token(..))
+import Data.Argonaut.Core (Json)
 import Data.Either (Either, either)
 import Data.Foreign (F, ForeignError)
 import Data.Foreign.Class (readJSON)
@@ -42,9 +43,6 @@ logError prefix = log <<< (<>) prefix <<< show
 readTextFileUtf8 :: forall e.
   String -> Aff (fs :: FS | e) (Either Error String)
 readTextFileUtf8 = attempt <<< readTextFile UTF8
-
-writeTextFileUtf8 :: forall e. String -> String -> Aff (fs :: FS | e) Unit
-writeTextFileUtf8 = writeTextFile UTF8
 
 showMessageIds :: forall t.
     String
@@ -77,11 +75,12 @@ onLocalCredentialsRead clientSecretContent tokenContent = either
   (runExcept $ readJSON clientSecretContent :: F ClientSecret)
 
 onNewToken :: forall e.
-  String -> String -> Eff (console :: CONSOLE, fs :: FS | e) Unit
-onNewToken "" token = (runAff
-  (logError "Getting new token failed: ")
-  (log <<< show)
-  (writeTextFileUtf8 Constants.tokenPath token)) >> log "42"
+  String -> Json -> Eff (console :: CONSOLE, fs :: FS | e) Unit
+onNewToken "" token =
+  (runAff
+    (logError "Getting new token failed: ")
+    (log <<< show)
+    (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
 onNewToken err _ = logError "Getting new token failed: " err
 
 foo :: forall e.
