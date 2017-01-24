@@ -7,7 +7,7 @@ import Control.Monad.Aff (Aff, attempt, launchAff, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, logShow)
-import Control.Monad.Eff.Exception (EXCEPTION, Error)
+import Control.Monad.Eff.Exception (EXCEPTION, Error, message)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Credentials.ClientSecret (ClientSecret(..))
@@ -118,6 +118,6 @@ infixl 1 then' as >>
 --         (\_ -> foo clientSecretContent)
 --         (onLocalCredentialsRead clientSecretContent))
 main = runAff
-  logShow
+  (logShow <<< message)
   (\_ -> log "Successfully finished")
   (getClient Constants.clientSecretPath)
