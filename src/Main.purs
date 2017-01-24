@@ -6,7 +6,7 @@ import Control.Bind (class Bind, (>>=))
 import Control.Monad.Aff (Aff, attempt, launchAff, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, log)
+import Control.Monad.Eff.Console (CONSOLE, log, logShow)
 import Control.Monad.Eff.Exception (EXCEPTION, Error)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
@@ -117,4 +117,7 @@ infixl 1 then' as >>
 --       (readTextFileUtf8 Constants.tokenPath) >>= liftEff <<< either
 --         (\_ -> foo clientSecretContent)
 --         (onLocalCredentialsRead clientSecretContent))
-main = getClient Constants.clientSecretPath >> log "73"
+main = runAff
+  logShow
+  (\_ -> log "Successfully finished")
+  (getClient Constants.clientSecretPath)
