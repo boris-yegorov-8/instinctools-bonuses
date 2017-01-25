@@ -14,6 +14,7 @@ import Control.Bind ((>>=), (>=>))
 import Control.Monad.Eff.Class (liftEff)
 import Data.Semigroup ((<>))
 import Data.Show (show)
+import Control.Monad.Eff.Exception (throwException, error)
 
 import Credentials.ClientSecret (ClientSecret(..))
 import Auth as Auth
@@ -22,7 +23,7 @@ import Util (throwWrappedError)
 getClient = attempt <<< readTextFile UTF8 >=> liftEff <<< either
   (throwWrappedError "Loading client secret file failed: ")
   (\clientSecretContent -> either
-    (throwWrappedError "Wrong credentials: ")
+    (\_ -> throwException $ error "Parsing client secret JSON failed: ")
     logShow
     -- (\(ClientSecret c) -> Auth.createClient c)
     (runExcept $ readJSON clientSecretContent :: F ClientSecret))
