@@ -59,10 +59,7 @@ function getNewToken(oauth2Client, callback) {
   console.log('Authorize this app by visiting this url: ', authUrl);
   var rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
-  });
-  rl.question('Enter the code from that page here: ', function(code) {
-    rl.close();
+    outpub: function () { console.log(this, '42'); };.close();
     oauth2Client.getToken(code, function(err, token) {
       if (err) {
         console.log('Error while trying to retrieve access token', err);

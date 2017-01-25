@@ -1,12 +1,16 @@
-module Util (logError) where
+module Util (throwWrappedError) where
 
-import Data.Show (class Show, show)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
-import Data.Unit (Unit)
 import Control.Semigroupoid ((<<<))
 import Data.Semigroup ((<>))
+import Control.Monad.Eff.Exception (
+  Error,
+  EXCEPTION,
+  error,
+  message,
+  throwException
+)
 
-logError :: forall e err. (Show err) =>
-  String -> err -> Eff (console :: CONSOLE | e) Unit
-logError prefix = log <<< (<>) prefix <<< show
+throwWrappedError :: forall e a.
+  String -> Error -> Eff (err :: EXCEPTION | e) a
+throwWrappedError prefix = throwException <<< error <<< (<>) prefix <<< message
