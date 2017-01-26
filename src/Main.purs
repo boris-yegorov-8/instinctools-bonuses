@@ -125,4 +125,4 @@ main = runAff
   (logShow <<< message)
   logShow
   -- (\_ -> log "Successfully finished")
-  (getClient Constants.clientSecretPath >>= getToken Constants.tokenPath)
+  (getClient Constants.clientSecretPath >>= getToken)

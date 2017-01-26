@@ -14,19 +14,26 @@ import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
 import Control.Monad.Eff.Exception (error)
+import Data.Semigroup ((<>))
 
-import Auth (Oauth2Client)
+import Auth (Oauth2Client, generateAuthUrl)
 import Credentials.Token (Token(..))
 import Util (throwError)
+import Constants (tokenPath, tokenOptions)
+
+refreshToken client =
+  log (
+    "Authorize this app by visiting this url: " <>
+    generateAuthUrl client tokenOptions
+  )
 
 -- getToken :: forall e.
 --   String -> Oauth2Client -> Aff (fs :: FS, console :: CONSOLE | e) String
-getToken path client =
+getToken client =
   attempt (
-    (readTextFile UTF8 path) >>=
+    (readTextFile UTF8 tokenPath) >>=
     (\content -> pure $ runExcept $ readJSON content :: F Token)
   ) >>=
   (\result -> case result of
-    Right (Right token) -> pure token
-    _ -> throwError "42")
-  -- "Authorize this app by visiting this url: "
+    Right (Right token) -> liftEff $ log "42" --pure token
+    _ -> liftEff $ refreshToken client)
