@@ -2,7 +2,7 @@ module Main where
 
 import Auth as Auth
 import Constants as Constants
-import Control.Bind (class Bind, (>>=))
+import Control.Bind (class Bind, (>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt, launchAff, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -27,7 +27,11 @@ import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile, writeTextFile)
 import Node.ReadLine as ReadLine
+import Control.Applicative (pure)
+
 import Client (getClient)
+import Token (getToken)
+
 -- type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 -- type EitherToken = Either (NonEmptyList ForeignError) Token
 
@@ -119,5 +123,6 @@ infixl 1 then' as >>
 --         (onLocalCredentialsRead clientSecretContent))
 main = runAff
   (logShow <<< message)
-  (\_ -> log "Successfully finished")
-  (getClient Constants.clientSecretPath)
+  logShow
+  -- (\_ -> log "Successfully finished")
+  (getClient Constants.clientSecretPath >>= getToken Constants.tokenPath)
