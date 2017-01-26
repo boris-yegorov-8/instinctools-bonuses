@@ -15,17 +15,30 @@ import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
 import Control.Monad.Eff.Exception (error)
 import Data.Semigroup ((<>))
+import Node.ReadLine as ReadLine
 
-import Auth (Oauth2Client, generateAuthUrl)
-import Credentials.Token (Token(..))
-import Util (throwError)
+import Auth as Auth
+import Credentials.Token (Token)
+import Util (throwError, throwWrappedError, (>>))
 import Constants (tokenPath, tokenOptions)
+
+onNewToken "" token = pure token
+onNewToken errMsg _ = throwError $ "Getting new token failed: " <> errMsg
 
 refreshToken client =
   log (
     "Authorize this app by visiting this url: " <>
-    generateAuthUrl client tokenOptions
-  )
+    Auth.generateAuthUrl client tokenOptions
+  ) >>
+  (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
+  (\interface ->
+    (ReadLine.setPrompt "> " 2 interface) >>
+    (ReadLine.setLineHandler
+      interface
+      (\code -> ReadLine.close interface >>
+        Auth.getToken client code onNewToken)
+    ) >>
+    (ReadLine.prompt interface))
 
 -- getToken :: forall e.
 --   String -> Oauth2Client -> Aff (fs :: FS, console :: CONSOLE | e) String
@@ -36,4 +49,6 @@ getToken client =
   ) >>=
   (\result -> case result of
     Right (Right token) -> liftEff $ log "42" --pure token
-    _ -> liftEff $ refreshToken client)
+    _ -> refreshToken client)
+
+-- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"

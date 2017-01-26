@@ -35,10 +35,10 @@ import Token (getToken)
 -- type EitherClientSecret = Either (NonEmptyList ForeignError) ClientSecret
 -- type EitherToken = Either (NonEmptyList ForeignError) Token
 
-then' :: forall m a b. (Bind m) => m a -> m b -> m b
-then' ma mb = ma >>= (\_ -> mb)
-
-infixl 1 then' as >>
+-- then' :: forall m a b. (Bind m) => m a -> m b -> m b
+-- then' ma mb = ma >>= (\_ -> mb)
+--
+-- infixl 1 then' as >>
 
 -- showMessageIds :: forall t.
 --     String
