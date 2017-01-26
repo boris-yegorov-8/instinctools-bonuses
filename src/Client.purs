@@ -1,7 +1,6 @@
 module Client (getClient) where
 
-import Control.Monad.Aff (Aff(..), attempt)
-import Control.Monad.Eff.Console (logShow)
+import Control.Monad.Aff (Aff, attempt)
 import Control.Semigroupoid ((<<<))
 import Node.Encoding (Encoding(..))
 import Node.FS.Aff (readTextFile)
@@ -10,20 +9,20 @@ import Data.Function (($))
 import Control.Monad.Except (runExcept)
 import Data.Foreign.Class (readJSON)
 import Data.Foreign (F)
-import Control.Bind ((>>=), (>=>))
-import Control.Monad.Eff.Class (liftEff)
-import Data.Semigroup ((<>))
-import Data.Show (show)
-import Control.Monad.Eff.Exception (throwException, error)
+import Control.Bind ((>=>))
 import Control.Applicative (pure)
+import Node.FS (FS)
+import Control.Monad.Eff.Exception (EXCEPTION)
 
 import Credentials.ClientSecret (ClientSecret(..))
-import Auth as Auth
-import Util (throwWrappedError)
+import Auth (Oauth2Client, createClient)
+import Util (throwError, throwWrappedError)
 
+getClient :: forall e.
+  String -> Aff (fs :: FS, err :: EXCEPTION | e) Oauth2Client
 getClient = attempt <<< readTextFile UTF8 >=> either
-  (liftEff <<< throwWrappedError "Loading client secret file failed: ")
+  (throwWrappedError "Loading client secret file failed: ")
   (\content -> either
-    (\_ -> liftEff $ throwException $ error "Parsing client secret JSON failed: ")
-    (\(ClientSecret c) -> pure $ Auth.createClient c)
+    (\_ -> throwError "Parsing client secret JSON failed: ")
+    (\(ClientSecret c) -> pure $ createClient c)
     (runExcept $ readJSON content :: F ClientSecret))
