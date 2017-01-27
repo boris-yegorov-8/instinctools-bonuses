@@ -22,6 +22,7 @@ import Credentials.Token (Token)
 import Util (throwError, throwWrappedError, (>>))
 import Constants (tokenPath, tokenOptions)
 
+-- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
 onNewToken "" token = pure token
 onNewToken errMsg _ = throwError $ "Getting new token failed: " <> errMsg
 
@@ -36,12 +37,10 @@ refreshToken client =
     (ReadLine.setLineHandler
       interface
       (\code -> ReadLine.close interface >>
-        Auth.getToken client code onNewToken)
+        Auth.getToken client code (\_ _ -> log "73"))
     ) >>
     (ReadLine.prompt interface))
 
--- getToken :: forall e.
---   String -> Oauth2Client -> Aff (fs :: FS, console :: CONSOLE | e) String
 getToken client =
   attempt (
     (readTextFile UTF8 tokenPath) >>=
@@ -49,6 +48,4 @@ getToken client =
   ) >>=
   (\result -> case result of
     Right (Right token) -> liftEff $ log "42" --pure token
-    _ -> refreshToken client)
-
--- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
+    _ -> liftEff $ refreshToken client)
