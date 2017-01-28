@@ -16,8 +16,8 @@
     "purescript-foreign": "^3.0.1",
     "purescript-arrays": "^3.1.0",
     "purescript-maybe": "^2.0.1",
-    "purescript-node-readline": "^2.0.0",
-    "purescript-argonaut-core": "^2.0.1"
+    "purescript-argonaut-core": "^2.0.1",
+    "purescript-simple-repl": "^2.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^2.0.0"

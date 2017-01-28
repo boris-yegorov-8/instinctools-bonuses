@@ -124,6 +124,5 @@ import Token (getToken)
 main = runAff
   logShow
   logShow
-  ((attempt $ pure $ error "42") >>= (either pure pure) >>= (\_ -> pure "73"))
   -- (\_ -> log "Successfully finished")
-  -- (getClient Constants.clientSecretPath >>= getToken)
+  (getClient Constants.clientSecretPath >>= getToken)

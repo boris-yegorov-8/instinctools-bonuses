@@ -1,4 +1,4 @@
-module Token (getToken) where
+module Token (getToken, refreshToken) where
 
 import Control.Applicative (pure)
 import Control.Bind ((>>=), (>=>))
@@ -13,33 +13,39 @@ import Data.Function (($))
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
 import Node.FS.Aff (readTextFile)
-import Control.Monad.Eff.Exception (error)
+import Control.Monad.Eff.Exception (error, throwException)
 import Data.Semigroup ((<>))
-import Node.ReadLine as ReadLine
+import Node.ReadLine.Aff.Simple (
+  prompt,
+  setPrompt,
+  close,
+  setLineHandler,
+  simpleInterface
+)
+import Control.Semigroupoid ((<<<))
 
 import Auth as Auth
 import Credentials.Token (Token)
-import Util (throwError, throwWrappedError, (>>))
+import Util ((>>))
 import Constants (tokenPath, tokenOptions)
 
 -- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
-onNewToken "" token = pure token
-onNewToken errMsg _ = throwError $ "Getting new token failed: " <> errMsg
+onNewToken "" token = logShow token -- pure token
+onNewToken errMsg _ = throwException $ error $ "Getting new token failed: " <> errMsg
 
+-- TODO: Try to make it point-free
 refreshToken client =
-  log (
-    "Authorize this app by visiting this url: " <>
-    Auth.generateAuthUrl client tokenOptions
-  ) >>
-  (ReadLine.createConsoleInterface ReadLine.noCompletion) >>=
+  simpleInterface >>=
   (\interface ->
-    (ReadLine.setPrompt "> " 2 interface) >>
-    (ReadLine.setLineHandler
-      interface
-      (\code -> ReadLine.close interface >>
-        Auth.getToken client code (\_ _ -> log "73"))
-    ) >>
-    (ReadLine.prompt interface))
+    (setPrompt (promptMessage <> "\n> ") 2 interface) >>
+    (prompt interface) >>
+    (setLineHandler interface) >>=
+    (\code -> close interface >> pure code)
+  ) >>=
+  (\code -> liftEff $ Auth.getToken client code onNewToken)
+  where
+    promptMessage = "Authorize this app by visiting this url: " <>
+      Auth.generateAuthUrl client tokenOptions
 
 getToken client =
   attempt (
@@ -48,4 +54,4 @@ getToken client =
   ) >>=
   (\result -> case result of
     Right (Right token) -> liftEff $ log "42" --pure token
-    _ -> liftEff $ refreshToken client)
+    _ -> refreshToken client)
