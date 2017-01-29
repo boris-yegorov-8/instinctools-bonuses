@@ -23,24 +23,23 @@ import Node.ReadLine.Aff.Simple (
   simpleInterface
 )
 import Control.Semigroupoid ((<<<))
+import Control.Apply ((*>))
 
 import Auth as Auth
 import Credentials.Token (Token)
-import Util ((>>))
 import Constants (tokenPath, tokenOptions)
 
 -- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
 onNewToken "" token = logShow token -- pure token
 onNewToken errMsg _ = throwException $ error $ "Getting new token failed: " <> errMsg
 
--- TODO: Try to make it point-free
 refreshToken client =
   simpleInterface >>=
   (\interface ->
-    (setPrompt (promptMessage <> "\n> ") 2 interface) >>
-    (prompt interface) >>
+    (setPrompt (promptMessage <> "\n> ") 2 interface) *>
+    (prompt interface) *>
     (setLineHandler interface) >>=
-    (\code -> close interface >> pure code)
+    (\code -> close interface *> pure code)
   ) >>=
   (\code -> liftEff $ Auth.getToken client code onNewToken)
   where

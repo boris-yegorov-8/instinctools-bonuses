@@ -18,7 +18,6 @@ import Credentials.ClientSecret (ClientSecret(..))
 import Auth (Oauth2Client, createClient)
 import Util (throwError, throwWrappedError)
 
--- TODO: Pass errors instead of throwing them
 getClient :: forall e.
   String -> Aff (fs :: FS, err :: EXCEPTION | e) Oauth2Client
 getClient = attempt <<< readTextFile UTF8 >=> either
