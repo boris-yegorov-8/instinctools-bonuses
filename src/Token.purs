@@ -2,7 +2,7 @@ module Token (getToken, refreshToken) where
 
 import Control.Applicative (pure)
 import Control.Bind ((>>=), (>=>))
-import Control.Monad.Aff (Aff, attempt)
+import Control.Monad.Aff (Aff, attempt, forkAff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, logShow)
 import Control.Monad.Except (runExcept)
@@ -23,6 +23,7 @@ import Node.ReadLine.Aff.Simple (
 )
 import Control.Semigroupoid ((<<<))
 import Control.Apply ((*>))
+import Data.Show (show)
 
 import Auth as Auth
 import Credentials.Token (Token)
@@ -40,9 +41,10 @@ refreshToken client =
   (attempt <<< Auth.getToken client) >>=
   (either
     (throwWrappedError "Getting new token failed: ")
-    (liftEff <<< logShow)
-  ) -- >>=
-  -- (writeTextFile UTF8 tokenPath <<< show)
+    (pure <<< show)
+  ) >>=
+  (forkAff <<< writeTextFile UTF8 tokenPath) >>=
+  (\_ -> liftEff $ log "42")
   where
     promptMessage = "Authorize this app by visiting this url: " <>
       Auth.generateAuthUrl client tokenOptions
