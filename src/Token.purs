@@ -28,7 +28,7 @@ import Data.Show (show)
 import Auth as Auth
 import Credentials.Token (Token)
 import Constants (tokenPath, tokenOptions)
-import Util (throwWrappedError)
+import Util (throwWrappedError, throwError)
 
 refreshToken client =
   simpleInterface >>=
@@ -41,10 +41,12 @@ refreshToken client =
   (attempt <<< Auth.getToken client) >>=
   (either
     (throwWrappedError "Getting new token failed: ")
-    (pure <<< show)
-  ) >>=
-  (forkAff <<< writeTextFile UTF8 tokenPath) >>=
-  (\_ -> liftEff $ log "42")
+    (\tokenJson ->
+      (forkAff $ writeTextFile UTF8 tokenPath $ show tokenJson) >>=
+      (\_ -> either
+        (\_ -> throwError "Wrong new token")
+        pure
+        (runExcept $ readJSON (show tokenJson) :: F Token))))
   where
     promptMessage = "Authorize this app by visiting this url: " <>
       Auth.generateAuthUrl client tokenOptions
@@ -55,5 +57,5 @@ getToken client =
     (\content -> pure $ runExcept $ readJSON content :: F Token)
   ) >>=
   (\result -> case result of
-    Right (Right token) -> liftEff $ log "42" --pure token
+    Right (Right token) -> pure token
     _ -> refreshToken client)
