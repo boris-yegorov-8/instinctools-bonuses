@@ -1,6 +1,5 @@
 module Auth (
   AuthEff,
-  GetTokenEff,
   Options,
   Oauth2Client,
   createClient,
@@ -10,9 +9,8 @@ module Auth (
 ) where
 
 import Data.Argonaut.Core (Json)
-import Data.Unit (Unit)
-import Control.Monad.Eff (Eff)
 import Credentials.Token (TokenObject)
+import Control.Monad.Aff (Aff)
 
 foreign import data Oauth2Client :: *
 
@@ -21,8 +19,6 @@ type Options = {
   clientSecret :: String,
   redirectUri :: String
 }
-
-type GetTokenEff eff = Eff (getToken :: AuthEff | eff) Unit
 
 foreign import data AuthEff :: !
 
@@ -37,5 +33,4 @@ foreign import generateAuthUrl :: Oauth2Client
 foreign import getToken :: forall eff.
                         Oauth2Client
                      -> String
-                     -> (String -> Json -> GetTokenEff eff)
-                     -> GetTokenEff eff
+                     -> Aff (getToken :: AuthEff | eff) Json

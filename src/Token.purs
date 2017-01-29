@@ -12,8 +12,7 @@ import Data.Foreign.Class (readJSON)
 import Data.Function (($))
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
-import Node.FS.Aff (readTextFile)
-import Control.Monad.Eff.Exception (error, throwException)
+import Node.FS.Aff (readTextFile, writeTextFile)
 import Data.Semigroup ((<>))
 import Node.ReadLine.Aff.Simple (
   prompt,
@@ -28,10 +27,7 @@ import Control.Apply ((*>))
 import Auth as Auth
 import Credentials.Token (Token)
 import Constants (tokenPath, tokenOptions)
-
--- (writeTextFile UTF8 Constants.tokenPath $ show token)) >> log "42"
-onNewToken "" token = logShow token -- pure token
-onNewToken errMsg _ = throwException $ error $ "Getting new token failed: " <> errMsg
+import Util (throwWrappedError)
 
 refreshToken client =
   simpleInterface >>=
@@ -41,7 +37,12 @@ refreshToken client =
     (setLineHandler interface) >>=
     (\code -> close interface *> pure code)
   ) >>=
-  (\code -> liftEff $ Auth.getToken client code onNewToken)
+  (attempt <<< Auth.getToken client) >>=
+  (either
+    (throwWrappedError "Getting new token failed: ")
+    (liftEff <<< logShow)
+  ) -- >>=
+  -- (writeTextFile UTF8 tokenPath <<< show)
   where
     promptMessage = "Authorize this app by visiting this url: " <>
       Auth.generateAuthUrl client tokenOptions

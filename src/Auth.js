@@ -26,12 +26,14 @@ exports.generateAuthUrl = function (oauth2Client) {
 
 exports.getToken = function (oauth2Client) {
   return function (code) {
-    return function(callback) {
-      return function() {
-        oauth2Client.getToken(code, function(err, token) {
-          callback(String(err || ''))(token)();
-        });
-      };
+    return function(success, error) {
+      oauth2Client.getToken(code, function(err, token) {
+        if (err) {
+          error(err);
+        } else {
+          success(token);
+        }
+      });
     };
-  }
+  };
 };
