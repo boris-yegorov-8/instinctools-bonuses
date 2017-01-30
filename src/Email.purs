@@ -2,15 +2,24 @@ module Email (getMessage) where
 
 import Control.Monad.Aff (attempt)
 import Data.Function (($))
+import Data.Either (Either(..), either)
+import Control.Semigroupoid ((<<<))
+import Control.Bind ((>>=))
+import Data.Functor ((<$>))
+import Control.Applicative (pure)
 
-import Auth as Auth
+import Gmail as Gmail
+import Util (throwWrappedError, throwError)
 
-getMessage client = attempt $ Auth.getMessages gmailOptions
-  where gmailOptions = {
+getMessage client =
+  (attempt $ Gmail.getMessages gmailOptions) >>=
+  (either
+    (throwWrappedError "Gmail API failed: ")
+    (pure <<< (<$>) (\message -> message.id))
+  )
+  where
+    gmailOptions = {
       auth: client,
       userId: "me",
       q: "subject:Позиции"
     }
-
--- showMessageIds "" messages = log $ show $ (\message -> message.id) <$> messages
--- showMessageIds err _ = log $ "Gmail API failed: " <> err

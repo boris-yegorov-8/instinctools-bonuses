@@ -6,7 +6,7 @@ exports.getMessages = function(options) {
       if (err) {
         error(err);
       } else {
-        success(response || {}).messages || []);
+        success((response || {}).messages || []);
       }
     });
   };

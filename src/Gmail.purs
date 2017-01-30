@@ -15,5 +15,6 @@ type GmailOptions = {
 }
 
 foreign import data GmailEff :: !
+
 foreign import getMessages :: forall eff.
   GmailOptions -> Aff (getMessages :: GmailEff | eff) (Array {id :: String})
