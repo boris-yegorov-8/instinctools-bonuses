@@ -1,12 +1,10 @@
 module Gmail (
   GmailEff,
   GmailOptions,
-  GetMessagesEff,
   getMessages
 ) where
 
-import Data.Unit (Unit)
-import Control.Monad.Eff (Eff)
+import Control.Monad.Aff (Aff)
 
 import Auth (Oauth2Client)
 
@@ -16,10 +14,6 @@ type GmailOptions = {
   q :: String
 }
 
-type GetMessagesEff eff = Eff (getMessages :: GmailEff | eff) Unit
-
 foreign import data GmailEff :: !
 foreign import getMessages :: forall eff.
-                        GmailOptions
-                     -> (String -> Array {id :: String} -> GetMessagesEff eff)
-                     -> GetMessagesEff eff
+  GmailOptions -> Aff (getMessages :: GmailEff | eff) (Array {id :: String})
