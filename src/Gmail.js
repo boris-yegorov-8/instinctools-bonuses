@@ -12,19 +12,17 @@ exports.getMessages = function(options) {
   };
 };
 
-exports.getMessage = function (userId) {
-  return function (messageId) {
-    return function(success, error) {
-      gmail.users.messages.list({ userId: userId, id: messageId }, function(err, response) {
-        if (err) {
-          error(err);
-        } else {
-          console.log('------------');
-          console.log(response);
-          console.log('-----------');
-          success(42);
-        }
-      });
-    };
+exports.getMessage = function (options) {
+  return function(success, error) {
+    gmail.users.messages.get(options, function(err, response) {
+      if (err) {
+        error(err);
+      } else {
+        console.log('-----------');
+        console.log(response.payload.parts[0].body.data);
+        console.log('-----------');
+        success(response);
+      }
+    });
   };
 };

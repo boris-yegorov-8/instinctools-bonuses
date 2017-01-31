@@ -12,6 +12,7 @@ import Data.Maybe (maybe')
 
 import Gmail as Gmail
 import Util (throwWrappedError, throwError)
+import Constants (userId)
 
 getMessage client =
   (attempt $ Gmail.getMessages gmailOptions) >>=
@@ -20,10 +21,10 @@ getMessage client =
     ((maybe' (\_ -> throwError "No letters were found") pure) <<<
       last <<< (<$>) (\message -> message.id))
   ) >>=
-  (Gmail.getMessage "me")
+  (\id -> Gmail.getMessage { auth: client, userId: userId, id: id })
   where
     gmailOptions = {
       auth: client,
-      userId: "me",
+      userId: userId,
       q: "subject:Позиции"
     }
