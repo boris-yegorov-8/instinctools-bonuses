@@ -23,6 +23,6 @@ getClient :: forall e.
 getClient = attempt <<< readTextFile UTF8 >=> either
   (throwWrappedError "Loading client secret file failed: ")
   (\content -> either
-    (\_ -> throwError "Parsing client secret JSON failed: ")
+    (throwError "Parsing client secret JSON failed: ")
     (\(ClientSecret c) -> pure $ createClient c)
     (runExcept $ readJSON content :: F ClientSecret))

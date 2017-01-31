@@ -57,7 +57,7 @@ refreshToken client =
   (\tokenString ->
     (forkAff $ writeTextFile UTF8 tokenPath tokenString) *>
     (either
-      (\_ -> throwError "Wrong new token")
+      (throwError "Wrong new token")
       pure
       (runExcept $ readJSON tokenString :: F Token)))
   where

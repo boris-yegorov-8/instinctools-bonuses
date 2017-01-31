@@ -37,7 +37,7 @@ getMessage client =
   (attempt $ Gmail.getMessages gmailOptions) >>=
   (either
     (throwWrappedError "Gmail API failed: ")
-    ((maybe' (\_ -> throwError "No letters were found") pure) <<<
+    ((maybe' (throwError "No letters were found") pure) <<<
       last <<< (<$>) (\message -> message.id))
   ) >>=
   (
@@ -46,7 +46,7 @@ getMessage client =
   (either
     (throwWrappedError "Gmail API failed: ")
     (\content -> either
-      (\_ -> throwError "Failed to parse the content of the email ")
+      (throwError "Failed to parse the content of the email ")
       pure
       (runExcept $ readJSON (show content) :: F Message)))
   where
