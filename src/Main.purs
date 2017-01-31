@@ -14,7 +14,7 @@ import Constants as Constants
 
 main = runAff
   logShow
-  (\_ -> logShow 73)
+  logShow
   -- (\_ -> log "Successfully finished")
   (
     (getClient Constants.clientSecretPath) >>=

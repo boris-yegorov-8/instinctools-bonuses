@@ -12,6 +12,8 @@ import Control.Monad.Eff.Exception (
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (Aff)
 
+-- TODO: Add a lazy throwError
+
 throwError :: forall e a. String -> Aff (err :: EXCEPTION | e) a
 throwError = liftEff <<< throwException <<< error
 

@@ -18,9 +18,6 @@ exports.getMessage = function (options) {
       if (err) {
         error(err);
       } else {
-        console.log('-----------');
-        console.log(response.payload.parts[0].body.data);
-        console.log('-----------');
         success(response);
       }
     });
