@@ -4,7 +4,7 @@ import Control.Monad.Aff (attempt)
 import Data.Function (($))
 import Data.Either (Either(..), either)
 import Control.Semigroupoid ((<<<))
-import Control.Bind (bind, (>>=), (>=>))
+import Control.Bind ((>>=), (>=>))
 import Data.Functor ((<$>))
 import Control.Applicative (pure)
 import Data.Array (last)
@@ -24,20 +24,14 @@ data Message = Message String
 instance showMessage :: Show Message where
   show (Message m) = m
 
--- TODO: try >>=
 instance messageIsForeign :: IsForeign Message where
-  read value =
-    let
-      readData =
-        (prop "payload") >=>
-        (prop "parts") >=>
-        (index 0) >=>
-        (prop "body") >=>
-        (readProp "data")
-    in
-      do
-        message <- readData value
-        pure $ Message message
+  read =
+    (prop "payload") >=>
+    (prop "parts") >=>
+    (index 0) >=>
+    (prop "body") >=>
+    (readProp "data") >=>
+    (pure <<< Message)
 
 getMessage client =
   (attempt $ Gmail.getMessages gmailOptions) >>=
