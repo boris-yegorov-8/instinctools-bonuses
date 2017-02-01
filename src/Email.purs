@@ -1,19 +1,23 @@
 module Email (Message(..), getMessage) where
 
-import Control.Monad.Aff (attempt)
-import Data.Function (($))
-import Data.Either (Either(..), either)
-import Control.Semigroupoid ((<<<))
-import Control.Bind ((>>=), (>=>))
-import Data.Functor ((<$>))
+import Node.Buffer as Buffer
 import Control.Applicative (pure)
+import Control.Bind ((>>=), (>=>))
+import Control.Monad.Aff (attempt)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Except (runExcept)
+import Control.Semigroupoid ((<<<))
 import Data.Array (last)
+import Data.Either (Either(..), either)
+import Data.Foreign (F)
+import Data.Foreign.Class (class IsForeign, readProp, readJSON)
+import Data.Foreign.Index (prop, index)
+import Data.Function (flip, ($))
+import Data.Functor ((<$>))
 import Data.Maybe (maybe')
 import Data.Show (class Show, show)
-import Data.Foreign.Class (class IsForeign, readProp, readJSON)
-import Data.Foreign (F)
-import Control.Monad.Except (runExcept)
-import Data.Foreign.Index (prop, index)
+import Node.Buffer (Buffer)
+import Node.Encoding (Encoding(..))
 
 import Gmail as Gmail
 import Util (throwWrappedError, throwError)
@@ -47,7 +51,7 @@ getMessage client =
     (throwWrappedError "Gmail API failed: ")
     (\content -> either
       (throwError "Failed to parse the content of the email ")
-      pure
+      (liftEff <<< (flip Buffer.fromString) Base64 <<< show)
       (runExcept $ readJSON (show content) :: F Message)))
   where
     gmailOptions = {
