@@ -10,21 +10,16 @@ import Control.Monad.Eff.Exception (
   throwException
 )
 import Control.Monad.Eff.Class (class MonadEff, liftEff)
-import Control.Monad.Aff (Aff)
 import Data.Function (const)
 
 throwError :: forall a b c e.
-  (MonadEff
-     ( err :: EXCEPTION
-     | e
-     )
-     b
-  ) => String -> a -> b c
-throwError = const <<< liftEff <<< throwException <<< error
+  (MonadEff (err :: EXCEPTION | e) b) => String -> a -> b c
+throwError = const <<< throwError'
 
-throwError' :: forall e a. String -> Aff (err :: EXCEPTION | e) a
+throwError' :: forall e a b.
+  (MonadEff (err :: EXCEPTION | e) a) => String -> a b
 throwError' = liftEff <<< throwException <<< error
 
-throwWrappedError :: forall e a.
-  String -> Error -> Aff (err :: EXCEPTION | e) a
+throwWrappedError :: forall b a e.
+  (MonadEff (err :: EXCEPTION | e) a) => String -> Error -> a b
 throwWrappedError prefix = throwError' <<< (<>) prefix <<< message
