@@ -7,7 +7,7 @@ import Control.Monad.Aff (attempt)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
-import Data.Array (last)
+import Data.Array (last, filter)
 import Data.Either (Either(..), either)
 import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readProp, readJSON)
@@ -16,8 +16,10 @@ import Data.Function (flip, ($))
 import Data.Functor ((<$>))
 import Data.Maybe (maybe')
 import Data.Show (class Show, show)
-import Node.Buffer (Buffer)
+import Node.Buffer (Buffer, BUFFER)
 import Node.Encoding (Encoding(..))
+import Control.Monad.Eff (Eff)
+import Data.String(Pattern(..), split, contains)
 
 import Gmail as Gmail
 import Util (throwWrappedError, throwError)
@@ -37,6 +39,15 @@ instance messageIsForeign :: IsForeign Message where
     (readProp "data") >=>
     (pure <<< Message)
 
+changeStringEncoding :: forall e.
+  Encoding -> Encoding -> String -> Eff (buffer :: BUFFER | e) String
+changeStringEncoding from to =
+  (flip Buffer.fromString) from >=> Buffer.toString to
+
+parseContent =
+  (changeStringEncoding Base64 UTF8) >=>
+  (pure <<< filter (contains $ Pattern " УУ: ") <<< split (Pattern "\r\n"))
+
 getMessage client =
   (attempt $ Gmail.getMessages gmailOptions) >>=
   (either
@@ -51,7 +62,7 @@ getMessage client =
     (throwWrappedError "Gmail API failed: ")
     (\content -> either
       (throwError "Failed to parse the content of the email ")
-      (liftEff <<< (flip Buffer.fromString) Base64 <<< show)
+      (liftEff <<< parseContent <<< show)
       (runExcept $ readJSON (show content) :: F Message)))
   where
     gmailOptions = {

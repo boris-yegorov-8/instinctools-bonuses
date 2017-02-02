@@ -22,7 +22,8 @@
     "purescript-node-fs": "^3.0.0",
     "purescript-node-readline": "^2.0.0",
     "purescript-node-buffer": "^2.0.0",
-    "purescript-simple-repl": "^2.1.0"
+    "purescript-simple-repl": "^2.1.0",
+    "purescript-strings": "^2.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^2.0.0"
