@@ -3,9 +3,9 @@ module Main where
 import Control.Bind ((>>=))
 import Control.Monad.Aff (runAff)
 import Control.Monad.Eff.Console (logShow)
-import Credentials.Token (Token(..))
 import Data.Function (($))
 
+import Credentials.Token (Token(..))
 import Client (getClient)
 import Token (getToken)
 import Email (getMessage)
