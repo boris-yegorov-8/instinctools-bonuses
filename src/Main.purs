@@ -11,6 +11,7 @@ import Token (getToken)
 import Email (getMessage)
 import Auth as Auth
 import Constants as Constants
+import Sheet (updateSheet)
 
 main = runAff
   logShow
@@ -18,6 +19,9 @@ main = runAff
   -- (\_ -> log "Successfully finished")
   (
     (getClient Constants.clientSecretPath) >>=
-    getToken >>=
-    (\(Token t) -> getMessage $ Auth.setToken t)
+    (\client ->
+      (getToken client) >>=
+      (\(Token t) -> getMessage $ Auth.setToken t) >>=
+      (updateSheet client)
+    )
   )

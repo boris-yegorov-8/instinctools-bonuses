@@ -26,9 +26,10 @@ foreign import createClient :: Options -> Oauth2Client
 
 foreign import setToken :: TokenObject -> Oauth2Client
 
-foreign import generateAuthUrl :: Oauth2Client
-                               -> { access_type :: String, scope :: String }
-                               -> String
+foreign import generateAuthUrl ::
+  Oauth2Client ->
+  { access_type :: String, scope :: Array String } ->
+  String
 
 foreign import getToken :: forall eff.
                         Oauth2Client
