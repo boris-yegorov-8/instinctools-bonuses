@@ -52,12 +52,12 @@ changeStringEncoding from to =
 parseLine :: Array String -> Array String
 parseLine line =
   [
-    (Regex.replace pattern0 "" $ fromMaybe "" $ head line),
-    (Regex.replace pattern1 "" $ fromMaybe "" $ last line)
+    (Regex.replace pattern0 "" $ fromMaybe "" $ last line),
+    (Regex.replace pattern1 "" $ fromMaybe "" $ head line)
   ]
   where
-    pattern0 = unsafeRegex "^[0-9]+ " RegexFlags.global
-    pattern1 = unsafeRegex " [0-9]$" RegexFlags.global
+    pattern0 = unsafeRegex " [0-9]$" RegexFlags.global
+    pattern1 = unsafeRegex "^[0-9]+ " RegexFlags.global
 
 parseContent :: forall e.
   String ->

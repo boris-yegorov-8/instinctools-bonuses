@@ -6,13 +6,16 @@ import Control.Bind ((>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
-import Data.Array (init)
+import Data.Array (init, union, head, filter, (!!))
 import Data.Either (either)
 import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readProp, readJSON)
 import Data.Function (($))
+import Data.Functor ((<#>))
 import Data.Maybe (maybe, fromMaybe)
 import Data.Show (class Show, show)
+import Data.Eq ((==))
+
 import GoogleSheets (getValues, batchUpdate)
 import Util (throwWrappedError, throwError)
 
@@ -26,7 +29,18 @@ instance valuesIsForeign :: IsForeign Values where
 
 parseValues content = runExcept $ readJSON (show content) :: F Values
 
-foo message values mapping = fromMaybe [] $ init values
+-- TODO: replace union with unionBy
+foo message values (Values mapping) =
+  message <#>
+  (\row ->
+    row `union`
+    (first' $ filter (((==) $ first row) <<< first) mapping) `union`
+    (first' $ filter (((==) $ second row) <<< second) values)
+  )
+  where
+    first = fromMaybe "" <<< head
+    first' = fromMaybe [] <<< head
+    second a = fromMaybe "" $ a !! 1
 
 updateSheet client message =
   (attempt $ getValues $ options { range = "Sheet1!A2:I" }) >>=
