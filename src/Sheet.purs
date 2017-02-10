@@ -6,15 +6,16 @@ import Control.Bind ((>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
-import Data.Array (init, union, head, filter, (!!))
+import Data.Array (concat, drop, filter, head, sortBy, union, (!!))
 import Data.Either (either)
+import Data.Eq ((==))
 import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readProp, readJSON)
 import Data.Function (($))
 import Data.Functor ((<#>))
 import Data.Maybe (maybe, fromMaybe)
 import Data.Show (class Show, show)
-import Data.Eq ((==))
+import Data.String (localeCompare)
 
 import GoogleSheets (getValues, batchUpdate)
 import Util (throwWrappedError, throwError)
@@ -29,13 +30,16 @@ instance valuesIsForeign :: IsForeign Values where
 
 parseValues content = runExcept $ readJSON (show content) :: F Values
 
--- TODO: replace union with unionBy
-foo message values (Values mapping) =
-  message <#>
-  (\row ->
-    row `union`
-    (first' $ filter (((==) $ first row) <<< first) mapping) `union`
-    (first' $ filter (((==) $ second row) <<< second) values)
+foo message values (Values mapping) = sortBy
+-- TODO: try to lift
+  (\a b -> second a `localeCompare` second b)
+  (
+    message <#>
+    (\row -> concat
+      [
+        row `union` (first' $ filter (((==) $ first row) <<< first) mapping),
+        (drop 3 $ first' $ filter (((==) $ second row) <<< second) values)
+      ])
   )
   where
     first = fromMaybe "" <<< head
