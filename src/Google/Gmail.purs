@@ -1,4 +1,4 @@
-module Gmail (
+module Google.Gmail (
   GmailEff,
   getMessages,
   getMessage

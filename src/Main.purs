@@ -2,7 +2,7 @@ module Main where
 
 import Control.Bind ((>>=))
 import Control.Monad.Aff (runAff)
-import Control.Monad.Eff.Console (logShow)
+import Control.Monad.Eff.Console (logShow, log)
 import Data.Function (($))
 
 import Credentials.Token (Token(..))
@@ -15,8 +15,7 @@ import Sheet (updateSheet)
 
 main = runAff
   logShow
-  logShow
-  -- (\_ -> log "Successfully finished")
+  (\_ -> log "Successfully finished")
   (
     (getClient Constants.clientSecretPath) >>=
     (\client ->

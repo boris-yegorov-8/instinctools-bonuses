@@ -26,7 +26,7 @@ import Data.String.Regex as Regex
 import Control.Monad.Eff.Exception (EXCEPTION)
 
 import Auth (Oauth2Client)
-import Gmail as Gmail
+import Google.Gmail as Gmail
 import Util (throwWrappedError, throwError)
 import Constants (userId)
 

@@ -7,13 +7,25 @@ import Control.Bind ((>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
-import Data.Array (length, concat, drop, filter, head, sortBy, union, (!!))
+import Data.Array (
+  length,
+  concat,
+  take,
+  drop,
+  filter,
+  head,
+  sortBy,
+  union,
+  init,
+  last,
+  (!!)
+)
 import Data.Either (either)
 import Data.Eq ((==))
 import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readProp, readJSON)
 import Data.Function (($))
-import Data.Functor ((<#>))
+import Data.Functor ((<#>), (<$>))
 import Data.Maybe (maybe, fromMaybe)
 import Data.Show (class Show, show)
 import Data.String (localeCompare)
@@ -21,8 +33,10 @@ import Data.Ord ((>), (<))
 import Data.Ring ((-))
 import Data.Int (toNumber)
 import Data.Semiring ((+))
+import Data.HeytingAlgebra ((&&))
 
-import GoogleSheets (Request(..), getValues, batchUpdate)
+import Google.Sheets as GS
+import Google.Sheets.Request (Request(..), Cell(..))
 import Util (throwWrappedError, throwError)
 
 data Values = Values (Array (Array String))
@@ -91,20 +105,90 @@ fitRows startIndex endIndex
     ]
   | true = []
 
+updateCells joinedTables =
+  [
+    UpdateCells
+      {
+        updateCells:
+          {
+            start:
+              {
+                sheetId: toNumber 0,
+                rowIndex: toNumber 1,
+                columnIndex: toNumber 0
+              },
+            rows,
+            fields: "userEnteredValue"
+          }
+      }
+  ]
+  where
+    rows = joinedTables <#> (\row ->
+      {
+        values: concat
+          [
+            (
+              (\cell -> { userEnteredValue: { stringValue: cell } }) <$>
+              (take 2 row)
+            ) --,
+            -- (
+            --   (\cell ->
+            --     CellNumber { userEnteredValue: { numberValue: cell } }) <$>
+            --   (2 `drop` [] `fromMaybe` init [1.0])
+            -- ),
+            -- (
+            --   (\cell ->
+            --     CellString { userEnteredValue: { stringValue: cell } }) <$>
+            --   (["" `fromMaybe` last row])
+            -- )
+          ]
+      })
+
+fitSums startIndex endIndex
+  | (startIndex > 1) && (endIndex > startIndex) =
+    [
+      CopyPaste
+        {
+          copyPaste:
+            {
+              source:
+                {
+                  sheetId: toNumber 0,
+                  startRowIndex: toNumber $ startIndex,
+                  endRowIndex: toNumber $ startIndex + 1,
+                  startColumnIndex: toNumber 7,
+                  endColumnIndex: toNumber 8
+                },
+              destination:
+                {
+                  sheetId: toNumber 0,
+                  startRowIndex: toNumber $ startIndex + 1,
+                  endRowIndex: toNumber endIndex,
+                  startColumnIndex: toNumber 7,
+                  endColumnIndex: toNumber 8
+                },
+              pasteType: "PASTE_FORMULA"
+            }
+        }
+    ]
+  | true = []
+
 -- createBatchResource :: forall options. Array (Array String) -> Array (Array String) -> (| options)
-createBatchResource tableFromSheet tableFromEmail =
+createBatchResource tableFromSheet tableFromEmail joinedTables =
   {
-    requests: (fitRows startIndex endIndex)
-      -- [
-      --   (fitRows tableFromSheet tableFromEmail)
-      -- ]
+    requests: concat
+      [
+        (fitRows startIndex endIndex),
+        (updateCells joinedTables),
+        (fitSums startIndex endIndex)
+      ]
   }
   where
     startIndex =  positiveOrZero $ (length tableFromSheet) - 1
     endIndex = (length tableFromEmail) + 1
 
 updateSheet client message =
-  (attempt $ getValues $ options { range = "Sheet1!A1:I" }) >>=
+  (attempt $ GS.getValues $ options { range = "Sheet1!A1:I" }) >>=
   (either
     (throwWrappedError "Failed to get the spreadsheet: ")
     pure
@@ -117,7 +201,7 @@ updateSheet client message =
     ) <<< parseValues
   ) >>=
   (\(Values v) ->
-    (attempt $ getValues $ options { range = "Sheet2!A1:B" }) >>=
+    (attempt $ GS.getValues $ options { range = "Sheet2!A1:B" }) >>=
     (either
       (throwWrappedError
         "Failed to get the mapping of the positions to the scores: ")
@@ -130,13 +214,14 @@ updateSheet client message =
         (pure <<< joinTables message v)
       ) <<< parseValues
     ) >>=
-    (\_ -> attempt $ batchUpdate
+    (\joinedTables -> attempt $ GS.batchUpdate
       {
         auth: client,
         spreadsheetId: sheetId,
-        resource: createBatchResource v message
+        resource: createBatchResource v message joinedTables
       }
-    )
+    ) >>=
+    ((throwWrappedError "Failed to update the spreadsheet: ") `either` pure)
   )
   where
     options = { auth: client, spreadsheetId: sheetId, range: "" }
