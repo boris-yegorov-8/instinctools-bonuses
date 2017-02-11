@@ -1,12 +1,13 @@
 module Sheet (Values(..), updateSheet) where
 
 import Constants (sheetId)
+import Control.Alt (alt)
 import Control.Applicative (pure)
 import Control.Bind ((>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
-import Data.Array (concat, drop, filter, head, sortBy, union, (!!))
+import Data.Array (length, concat, drop, filter, head, sortBy, union, (!!))
 import Data.Either (either)
 import Data.Eq ((==))
 import Data.Foreign (F)
@@ -16,8 +17,12 @@ import Data.Functor ((<#>))
 import Data.Maybe (maybe, fromMaybe)
 import Data.Show (class Show, show)
 import Data.String (localeCompare)
+import Data.Ord ((>), (<))
+import Data.Ring ((-))
+import Data.Int (toNumber)
+import Data.Semiring ((+))
 
-import GoogleSheets (getValues, batchUpdate)
+import GoogleSheets (Request(..), getValues, batchUpdate)
 import Util (throwWrappedError, throwError)
 
 data Values = Values (Array (Array String))
@@ -30,8 +35,7 @@ instance valuesIsForeign :: IsForeign Values where
 
 parseValues content = runExcept $ readJSON (show content) :: F Values
 
-foo message values (Values mapping) = sortBy
--- TODO: try to lift
+joinTables message values (Values mapping) = sortBy
   (\a b -> second a `localeCompare` second b)
   (
     message <#>
@@ -46,8 +50,61 @@ foo message values (Values mapping) = sortBy
     first' = fromMaybe [] <<< head
     second a = fromMaybe "" $ a !! 1
 
+positiveOrZero a
+  | a > 0 = a
+  | true = 0
+
+-- fitRows :: forall options. Int -> Int -> { | options }
+fitRows startIndex endIndex
+  | endIndex > startIndex =
+    [
+      InsertDimension
+        {
+          insertDimension:
+            {
+              range:
+                {
+                  sheetId: toNumber 0,
+                  dimension: "ROWS",
+                  startIndex: toNumber startIndex,
+                  endIndex: toNumber endIndex
+                },
+              inheritFromBefore: true
+            }
+        }
+    ]
+  | endIndex < startIndex =
+    [
+      DeleteDimension
+        {
+          deleteDimension:
+            {
+              range:
+                {
+                  sheetId: toNumber 0,
+                  dimension: "ROWS",
+                  startIndex: toNumber endIndex,
+                  endIndex: toNumber startIndex
+                }
+            }
+        }
+    ]
+  | true = []
+
+-- createBatchResource :: forall options. Array (Array String) -> Array (Array String) -> (| options)
+createBatchResource tableFromSheet tableFromEmail =
+  {
+    requests: (fitRows startIndex endIndex)
+      -- [
+      --   (fitRows tableFromSheet tableFromEmail)
+      -- ]
+  }
+  where
+    startIndex =  positiveOrZero $ (length tableFromSheet) - 1
+    endIndex = (length tableFromEmail) + 1
+
 updateSheet client message =
-  (attempt $ getValues $ options { range = "Sheet1!A2:I" }) >>=
+  (attempt $ getValues $ options { range = "Sheet1!A1:I" }) >>=
   (either
     (throwWrappedError "Failed to get the spreadsheet: ")
     pure
@@ -70,10 +127,16 @@ updateSheet client message =
       (either
         (throwError
           "Failed to parse the mapping of the positions to the scores: ")
-        (pure <<< foo message v)
+        (pure <<< joinTables message v)
       ) <<< parseValues
+    ) >>=
+    (\_ -> attempt $ batchUpdate
+      {
+        auth: client,
+        spreadsheetId: sheetId,
+        resource: createBatchResource v message
+      }
     )
   )
   where
     options = { auth: client, spreadsheetId: sheetId, range: "" }
-  -- (\_ -> batchUpdate { auth: client, spreadsheetId: sheetId })

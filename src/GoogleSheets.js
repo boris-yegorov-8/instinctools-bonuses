@@ -15,11 +15,11 @@ exports.getValues = function(options) {
 exports.batchUpdate = function(options) {
   return function(success, error) {
     // TODO: move request to purs
-    var request = {
-      auth: options.auth,
-      spreadsheetId: options.spreadsheetId,
-      resource: {
-        requests: [
+    // var request = {
+    //   auth: options.auth,
+    //   spreadsheetId: options.spreadsheetId,
+    //   resource: {
+    //     requests: [
           // {
           //   updateCells: {
           //     start: { sheetId: 0, rowIndex: 156, columnIndex: 0 },
@@ -54,30 +54,27 @@ exports.batchUpdate = function(options) {
           //     pasteType: 'PASTE_FORMULA'
           //   }
           // },
-          {
-            insertDimension: {
-              range: {
-                sheetId: 0,
-                dimension: 'ROWS',
-                startIndex: 154,
-                endIndex: 160,
-              },
-              inheritFromBefore: true,
-            }
-          }
-        ]
+    //     ]
+    //   }
+    // };
+    // console.log('----------');
+    // console.log(JSON.stringify(options.resource.requests));
+    // console.log('-----------');
+    sheets.spreadsheets.batchUpdate(
+      {
+        auth: options.auth,
+        spreadsheetId: options.spreadsheetId,
+        resource: {
+          requests: options.resource.requests.map(function (request) { return request.value0; }),
+        },
+      },
+      function(err) {
+        if (err) {
+          error(err);
+        } else {
+          success('42');
+        }
       }
-    };
-
-    sheets.spreadsheets.batchUpdate(request, function(err, response) {
-      if (err) {
-        error(err);
-      } else {
-        console.log('-------------');
-        console.log(response);
-        console.log('-------------');
-        success('42');
-      }
-    });
+    );
   };
 };
