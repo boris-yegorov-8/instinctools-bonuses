@@ -9,14 +9,11 @@ import Control.Semigroupoid ((<<<))
 import Data.Array (
   length,
   concat,
-  take,
   drop,
   filter,
   head,
   sortBy,
   union,
-  init,
-  last,
   (!!)
 )
 import Data.Either (either)
@@ -31,18 +28,17 @@ import Data.String (localeCompare)
 import Data.Ord ((>), (<))
 import Data.Ring ((-))
 import Data.Semiring ((+))
-import Data.HeytingAlgebra ((&&))
-import Data.Semigroup ((<>))
-import Data.String.Regex.Unsafe (unsafeRegex)
-import Data.String.Regex.Flags as RegexFlags
-import Data.String.Regex as Regex
 import Data.StrMap as StrMap
 import Data.Tuple (Tuple(..))
 import Data.Argonaut.Core as J
+import Data.Argonaut.Core (Json)
 import Data.Int as I
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Data.Unit (Unit)
 
 import Google.Sheets as GS
 import Util (throwWrappedError, throwError)
+import Auth (Oauth2Client)
 
 data Values = Values (Array (Array String))
 
@@ -51,8 +47,6 @@ instance showValues :: Show Values where
 
 instance valuesIsForeign :: IsForeign Values where
   read = (readProp "values") >=> (pure <<< Values)
-
-parseValues content = runExcept $ readJSON (show content) :: F Values
 
 joinTables ::
   Array (Array String) ->
@@ -79,10 +73,13 @@ positiveOrZero a
   | a > 0 = a
   | true = 0
 
+pairsToJson :: Array (Tuple String Json) -> Json
 pairsToJson = J.fromObject <<< StrMap.fromFoldable
 
+intToJson :: Int -> Json
 intToJson = J.fromNumber <<< I.toNumber
 
+rangeToJson :: Int -> Int -> Json
 rangeToJson startIndex endIndex = pairsToJson
   [
     "sheetId" `Tuple` intToJson 0,
@@ -91,7 +88,7 @@ rangeToJson startIndex endIndex = pairsToJson
     "endIndex" `Tuple` intToJson endIndex
   ]
 
--- fitRows :: Int -> Int -> Array String
+fitRows :: Int -> Int -> Array Json
 fitRows startIndex endIndex
   | endIndex > startIndex =
     [
@@ -116,6 +113,7 @@ fitRows startIndex endIndex
       ]
   | true = []
 
+numberCellToJson :: Int -> Json
 numberCellToJson value = pairsToJson
   [
     "userEnteredValue" `Tuple` pairsToJson
@@ -124,6 +122,7 @@ numberCellToJson value = pairsToJson
       ]
   ]
 
+stringCellToJson :: String -> Json
 stringCellToJson value = pairsToJson
   [
     "userEnteredValue" `Tuple` pairsToJson
@@ -132,6 +131,7 @@ stringCellToJson value = pairsToJson
       ]
   ]
 
+rowToJson :: Array String -> Json
 rowToJson row = pairsToJson
   [
     "values" `Tuple` (J.fromArray $ cellToJson <$> row)
@@ -141,7 +141,7 @@ rowToJson row = pairsToJson
       Just n -> numberCellToJson n
       Nothing -> stringCellToJson cell
 
--- updateCells :: Array (Array String) -> Array String
+updateCells :: Array (Array String) -> Array Json
 updateCells joinedTables =
   [
     pairsToJson
@@ -164,6 +164,7 @@ updateCells joinedTables =
   where
     rows = rowToJson <$> joinedTables
 
+updateSums :: Int -> Array Json
 updateSums endIndex =
   [
     pairsToJson
@@ -194,11 +195,11 @@ updateSums endIndex =
       ]
   ]
 
--- createBatchResource ::
---   Array (Array String) ->
---   Array (Array String) ->
---   Array (Array String) ->
---   String
+createBatchResource ::
+  Array (Array String) ->
+  Array (Array String) ->
+  Array (Array String) ->
+  Json
 createBatchResource tableFromSheet tableFromEmail joinedTables =
   pairsToJson ["requests" `Tuple` J.fromArray requests]
   where
@@ -211,6 +212,10 @@ createBatchResource tableFromSheet tableFromEmail joinedTables =
         (updateSums endIndex)
       ]
 
+updateSheet :: forall e.
+  Oauth2Client ->
+  Array (Array String) ->
+  Aff (getValues :: GS.GoogleSheetsEff, err :: EXCEPTION| e) Unit
 updateSheet client message =
   (attempt $ GS.getValues $ options { range = "Sheet1!A1:I" }) >>=
   (either
@@ -249,3 +254,4 @@ updateSheet client message =
   )
   where
     options = { auth: client, spreadsheetId: sheetId, range: "" }
+    parseValues content = runExcept $ readJSON (show content) :: F Values
