@@ -15,22 +15,14 @@ exports.getValues = function(options) {
 exports.batchUpdate = function(options) {
   return function(success, error) {
     console.log('-------------');
-    // console.log(JSON.parse(options.resource));
-    console.log(options.resource);
+    console.log(options.resource.requests[1].updateCells.fields);
     console.log('-------------');
-    sheets.spreadsheets.batchUpdate(
-      {
-        auth: options.auth,
-        spreadsheetId: options.spreadsheetId,
-        resource: JSON.parse(options.resource),
-      },
-      function(err) {
-        if (err) {
-          error(err);
-        } else {
-          success();
-        }
+    sheets.spreadsheets.batchUpdate(options, function(err) {
+      if (err) {
+        error(err);
+      } else {
+        success();
       }
-    );
+    });
   };
 };

@@ -20,6 +20,6 @@ foreign import batchUpdate :: forall e.
   {
     auth :: Oauth2Client,
     spreadsheetId :: String,
-    resource :: String
+    resource :: Json
   } ->
   Aff (getValues :: GoogleSheetsEff | e) Unit

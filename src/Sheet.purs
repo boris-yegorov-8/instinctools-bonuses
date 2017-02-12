@@ -36,6 +36,10 @@ import Data.Semigroup ((<>))
 import Data.String.Regex.Unsafe (unsafeRegex)
 import Data.String.Regex.Flags as RegexFlags
 import Data.String.Regex as Regex
+import Data.StrMap as StrMap
+import Data.Tuple (Tuple(..))
+import Data.Argonaut.Core as J
+import Data.Int as I
 
 import Google.Sheets as GS
 import Util (throwWrappedError, throwError)
@@ -75,88 +79,93 @@ positiveOrZero a
   | a > 0 = a
   | true = 0
 
-fitRows :: Int -> Int -> Array String
+pairsToJson = J.fromObject <<< StrMap.fromFoldable
+
+intToJson = J.fromNumber <<< I.toNumber
+
+rangeToJson startIndex endIndex = pairsToJson
+  [
+    "sheetId" `Tuple` intToJson 0,
+    "dimension" `Tuple` J.fromString "ROWS",
+    "startIndex" `Tuple` intToJson startIndex,
+    "endIndex" `Tuple` intToJson endIndex
+  ]
+
+-- fitRows :: Int -> Int -> Array String
 fitRows startIndex endIndex
   | endIndex > startIndex =
     [
-      """
-        {
-          "insertDimension":
-            {
-              "range":
-                {
-                  "sheetId": 0,
-                  "dimension": "ROWS",
-                  "startIndex": """ <> show startIndex <> """,
-                  "endIndex": """ <> show endIndex <> """
-                },
-              "inheritFromBefore": true
-            }
-        }
-      """
+      pairsToJson
+        [
+          "insertDimension" `Tuple` pairsToJson
+            [
+              "range" `Tuple` rangeToJson startIndex endIndex,
+              "inheritFromBefore" `Tuple` J.fromBoolean true
+            ]
+        ]
     ]
   | endIndex < startIndex =
-    [
-      """
-        {
-          "deleteDimension":
-            {
-              "range":
-                {
-                  "sheetId": 0,
-                  dimension: "ROWS",
-                  "startIndex": """ <> show endIndex <> """,
-                  "endIndex": """ <> show startIndex <> """
-                }
-            }
-        }
-      """
-    ]
+      [
+        pairsToJson
+          [
+            "insertDimension" `Tuple` pairsToJson
+              [
+                "range" `Tuple` rangeToJson endIndex startIndex
+              ]
+          ]
+      ]
   | true = []
 
-numberCell value =
-  """
-    {
-      "userEnteredValue": { "numberValue": """ <> value <> """ }
-    }
-  """
-
-stringCell value =
-  """
-    {
-      "userEnteredValue": { "stringValue": """ <> value <> """ }
-    }
-  """
-
-rowValues row = show $ concat
+numberCellToJson value = pairsToJson
   [
-    (stringCell <$> (take 2 row)),
-    (numberCell <$> (2 `drop` [] `fromMaybe` init row)),
-    (stringCell <$> (["" `fromMaybe` last row]))
+    "userEnteredValue" `Tuple` pairsToJson
+      [
+        "numberValue" `Tuple` J.fromString value -- TODO: number
+      ]
   ]
 
-updateCells :: Array (Array String) -> Array String
+stringCellToJson value = pairsToJson
+  [
+    "userEnteredValue" `Tuple` pairsToJson
+      [
+        "stringValue" `Tuple` J.fromString value
+      ]
+  ]
+
+rowToJson row = pairsToJson
+  [
+    "values" `Tuple` (J.fromArray $ stringCellToJson <$> row)
+  ]
+
+  -- concat
+  --   [
+  --     (stringCellToJson <$> (take 2 row)),
+  --     (numberCellToJson <$> (drop 2 $ fromMaybe [] $ init row)),
+  --     (stringCellToJson <$> (["" `fromMaybe` last row]))
+  --   ]
+
+-- updateCells :: Array (Array String) -> Array String
 updateCells joinedTables =
   [
-    """
-      {
-        "updateCells":
-          {
-            "start":
-              {
-                "sheetId": 0,
-                rowIndex: 1,
-                columnIndex: 0
-              },
-            "rows": """ <> show rows <> """,
-            fields: "userEnteredValue"
-          }
-      }
-    """
+    pairsToJson
+      [
+        "updateCells" `Tuple` pairsToJson
+          [
+            (
+              "start" `Tuple` pairsToJson
+                [
+                  ("sheetId" `Tuple` intToJson 0),
+                  ("rowIndex" `Tuple` intToJson 1),
+                  ("columnIndex" `Tuple` intToJson 0)
+                ]
+            ),
+            ("fields" `Tuple` J.fromString "userEnteredValue"),
+            ("rows" `Tuple` J.fromArray rows)
+          ]
+      ]
   ]
   where
-    rows = (1 `take` joinedTables) <#>
-      (\row -> """{ "values": """ <> rowValues row <> """ }""")
+    rows = rowToJson <$> joinedTables
 
 -- fitSums startIndex endIndex
 --   | (startIndex > 1) && (endIndex > startIndex) =
@@ -187,26 +196,21 @@ updateCells joinedTables =
 --     ]
 --   | true = []
 
-createBatchResource ::
-  Array (Array String) ->
-  Array (Array String) ->
-  Array (Array String) ->
-  String
+-- createBatchResource ::
+--   Array (Array String) ->
+--   Array (Array String) ->
+--   Array (Array String) ->
+--   String
 createBatchResource tableFromSheet tableFromEmail joinedTables =
-    ("""{ "requests": """ <> requests <> """ }""")
-
+  pairsToJson ["requests" `Tuple` J.fromArray requests]
   where
     startIndex =  positiveOrZero $ (length tableFromSheet) - 1
     endIndex = (length tableFromEmail) + 1
-    requests = --Regex.replace
-      -- (unsafeRegex "\n" RegexFlags.global)
-      (show $ concat
-        [
-          ["42"]
-          -- (fitRows startIndex endIndex)
-          -- (updateCells joinedTables)
-          -- (fitSums startIndex endIndex)
-        ])
+    requests = concat
+      [
+        (fitRows startIndex endIndex),
+        (updateCells joinedTables)
+      ]
 
 updateSheet client message =
   (attempt $ GS.getValues $ options { range = "Sheet1!A1:I" }) >>=
