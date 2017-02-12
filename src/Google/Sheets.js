@@ -14,13 +14,15 @@ exports.getValues = function(options) {
 
 exports.batchUpdate = function(options) {
   return function(success, error) {
+    console.log('-------------');
+    // console.log(JSON.parse(options.resource));
+    console.log(options.resource);
+    console.log('-------------');
     sheets.spreadsheets.batchUpdate(
       {
         auth: options.auth,
         spreadsheetId: options.spreadsheetId,
-        resource: {
-          requests: options.resource.requests.map(function (request) { return request.value0; }),
-        },
+        resource: JSON.parse(options.resource),
       },
       function(err) {
         if (err) {

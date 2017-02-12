@@ -1,7 +1,6 @@
 module Sheet (Values(..), updateSheet) where
 
 import Constants (sheetId)
-import Control.Alt (alt)
 import Control.Applicative (pure)
 import Control.Bind ((>>=), (>=>))
 import Control.Monad.Aff (Aff, attempt)
@@ -31,12 +30,14 @@ import Data.Show (class Show, show)
 import Data.String (localeCompare)
 import Data.Ord ((>), (<))
 import Data.Ring ((-))
-import Data.Int (toNumber)
 import Data.Semiring ((+))
 import Data.HeytingAlgebra ((&&))
+import Data.Semigroup ((<>))
+import Data.String.Regex.Unsafe (unsafeRegex)
+import Data.String.Regex.Flags as RegexFlags
+import Data.String.Regex as Regex
 
 import Google.Sheets as GS
-import Google.Sheets.Request (Request(..), Cell(..))
 import Util (throwWrappedError, throwError)
 
 data Values = Values (Array (Array String))
@@ -49,6 +50,11 @@ instance valuesIsForeign :: IsForeign Values where
 
 parseValues content = runExcept $ readJSON (show content) :: F Values
 
+joinTables ::
+  Array (Array String) ->
+  Array (Array String) ->
+  Values ->
+  Array (Array String)
 joinTables message values (Values mapping) = sortBy
   (\a b -> second a `localeCompare` second b)
   (
@@ -64,128 +70,143 @@ joinTables message values (Values mapping) = sortBy
     first' = fromMaybe [] <<< head
     second a = fromMaybe "" $ a !! 1
 
+positiveOrZero :: Int -> Int
 positiveOrZero a
   | a > 0 = a
   | true = 0
 
--- fitRows :: forall options. Int -> Int -> { | options }
+fitRows :: Int -> Int -> Array String
 fitRows startIndex endIndex
   | endIndex > startIndex =
     [
-      InsertDimension
+      """
         {
-          insertDimension:
+          "insertDimension":
             {
-              range:
+              "range":
                 {
-                  sheetId: toNumber 0,
-                  dimension: "ROWS",
-                  startIndex: toNumber startIndex,
-                  endIndex: toNumber endIndex
+                  "sheetId": 0,
+                  "dimension": "ROWS",
+                  "startIndex": """ <> show startIndex <> """,
+                  "endIndex": """ <> show endIndex <> """
                 },
-              inheritFromBefore: true
+              "inheritFromBefore": true
             }
         }
+      """
     ]
   | endIndex < startIndex =
     [
-      DeleteDimension
+      """
         {
-          deleteDimension:
+          "deleteDimension":
             {
-              range:
+              "range":
                 {
-                  sheetId: toNumber 0,
+                  "sheetId": 0,
                   dimension: "ROWS",
-                  startIndex: toNumber endIndex,
-                  endIndex: toNumber startIndex
+                  "startIndex": """ <> show endIndex <> """,
+                  "endIndex": """ <> show startIndex <> """
                 }
             }
         }
+      """
     ]
   | true = []
 
+numberCell value =
+  """
+    {
+      "userEnteredValue": { "numberValue": """ <> value <> """ }
+    }
+  """
+
+stringCell value =
+  """
+    {
+      "userEnteredValue": { "stringValue": """ <> value <> """ }
+    }
+  """
+
+rowValues row = show $ concat
+  [
+    (stringCell <$> (take 2 row)),
+    (numberCell <$> (2 `drop` [] `fromMaybe` init row)),
+    (stringCell <$> (["" `fromMaybe` last row]))
+  ]
+
+updateCells :: Array (Array String) -> Array String
 updateCells joinedTables =
   [
-    UpdateCells
+    """
       {
-        updateCells:
+        "updateCells":
           {
-            start:
+            "start":
               {
-                sheetId: toNumber 0,
-                rowIndex: toNumber 1,
-                columnIndex: toNumber 0
+                "sheetId": 0,
+                rowIndex: 1,
+                columnIndex: 0
               },
-            rows,
+            "rows": """ <> show rows <> """,
             fields: "userEnteredValue"
           }
       }
+    """
   ]
   where
-    rows = joinedTables <#> (\row ->
-      {
-        values: concat
-          [
-            (
-              (\cell -> { userEnteredValue: { stringValue: cell } }) <$>
-              (take 2 row)
-            ) --,
-            -- (
-            --   (\cell ->
-            --     CellNumber { userEnteredValue: { numberValue: cell } }) <$>
-            --   (2 `drop` [] `fromMaybe` init [1.0])
-            -- ),
-            -- (
-            --   (\cell ->
-            --     CellString { userEnteredValue: { stringValue: cell } }) <$>
-            --   (["" `fromMaybe` last row])
-            -- )
-          ]
-      })
+    rows = (1 `take` joinedTables) <#>
+      (\row -> """{ "values": """ <> rowValues row <> """ }""")
 
-fitSums startIndex endIndex
-  | (startIndex > 1) && (endIndex > startIndex) =
-    [
-      CopyPaste
-        {
-          copyPaste:
-            {
-              source:
-                {
-                  sheetId: toNumber 0,
-                  startRowIndex: toNumber $ startIndex,
-                  endRowIndex: toNumber $ startIndex + 1,
-                  startColumnIndex: toNumber 7,
-                  endColumnIndex: toNumber 8
-                },
-              destination:
-                {
-                  sheetId: toNumber 0,
-                  startRowIndex: toNumber $ startIndex + 1,
-                  endRowIndex: toNumber endIndex,
-                  startColumnIndex: toNumber 7,
-                  endColumnIndex: toNumber 8
-                },
-              pasteType: "PASTE_FORMULA"
-            }
-        }
-    ]
-  | true = []
+-- fitSums startIndex endIndex
+--   | (startIndex > 1) && (endIndex > startIndex) =
+--     [
+--       CopyPaste
+--         {
+--           copyPaste:
+--             {
+--               source:
+--                 {
+--                   sheetId: toNumber 0,
+--                   startRowIndex: toNumber $ startIndex,
+--                   endRowIndex: toNumber $ startIndex + 1,
+--                   startColumnIndex: toNumber 7,
+--                   endColumnIndex: toNumber 8
+--                 },
+--               destination:
+--                 {
+--                   sheetId: toNumber 0,
+--                   startRowIndex: toNumber $ startIndex + 1,
+--                   endRowIndex: toNumber endIndex,
+--                   startColumnIndex: toNumber 7,
+--                   endColumnIndex: toNumber 8
+--                 },
+--               pasteType: "PASTE_FORMULA"
+--             }
+--         }
+--     ]
+--   | true = []
 
--- createBatchResource :: forall options. Array (Array String) -> Array (Array String) -> (| options)
+createBatchResource ::
+  Array (Array String) ->
+  Array (Array String) ->
+  Array (Array String) ->
+  String
 createBatchResource tableFromSheet tableFromEmail joinedTables =
-  {
-    requests: concat
-      [
-        (fitRows startIndex endIndex),
-        (updateCells joinedTables),
-        (fitSums startIndex endIndex)
-      ]
-  }
+    ("""{ "requests": """ <> requests <> """ }""")
+
   where
     startIndex =  positiveOrZero $ (length tableFromSheet) - 1
     endIndex = (length tableFromEmail) + 1
+    requests = --Regex.replace
+      -- (unsafeRegex "\n" RegexFlags.global)
+      (show $ concat
+        [
+          ["42"]
+          -- (fitRows startIndex endIndex)
+          -- (updateCells joinedTables)
+          -- (fitSums startIndex endIndex)
+        ])
 
 updateSheet client message =
   (attempt $ GS.getValues $ options { range = "Sheet1!A1:I" }) >>=
