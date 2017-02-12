@@ -25,7 +25,7 @@ import Data.Foreign (F)
 import Data.Foreign.Class (class IsForeign, readProp, readJSON)
 import Data.Function (($))
 import Data.Functor ((<#>), (<$>))
-import Data.Maybe (maybe, fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Show (class Show, show)
 import Data.String (localeCompare)
 import Data.Ord ((>), (<))
@@ -120,7 +120,7 @@ numberCellToJson value = pairsToJson
   [
     "userEnteredValue" `Tuple` pairsToJson
       [
-        "numberValue" `Tuple` J.fromString value -- TODO: number
+        "numberValue" `Tuple` intToJson value
       ]
   ]
 
@@ -134,15 +134,12 @@ stringCellToJson value = pairsToJson
 
 rowToJson row = pairsToJson
   [
-    "values" `Tuple` (J.fromArray $ stringCellToJson <$> row)
+    "values" `Tuple` (J.fromArray $ cellToJson <$> row)
   ]
-
-  -- concat
-  --   [
-  --     (stringCellToJson <$> (take 2 row)),
-  --     (numberCellToJson <$> (drop 2 $ fromMaybe [] $ init row)),
-  --     (stringCellToJson <$> (["" `fromMaybe` last row]))
-  --   ]
+  where
+    cellToJson cell = case I.fromString cell of
+      Just n -> numberCellToJson n
+      Nothing -> stringCellToJson cell
 
 -- updateCells :: Array (Array String) -> Array String
 updateCells joinedTables =
