@@ -164,34 +164,35 @@ updateCells joinedTables =
   where
     rows = rowToJson <$> joinedTables
 
--- fitSums startIndex endIndex
---   | (startIndex > 1) && (endIndex > startIndex) =
---     [
---       CopyPaste
---         {
---           copyPaste:
---             {
---               source:
---                 {
---                   sheetId: toNumber 0,
---                   startRowIndex: toNumber $ startIndex,
---                   endRowIndex: toNumber $ startIndex + 1,
---                   startColumnIndex: toNumber 7,
---                   endColumnIndex: toNumber 8
---                 },
---               destination:
---                 {
---                   sheetId: toNumber 0,
---                   startRowIndex: toNumber $ startIndex + 1,
---                   endRowIndex: toNumber endIndex,
---                   startColumnIndex: toNumber 7,
---                   endColumnIndex: toNumber 8
---                 },
---               pasteType: "PASTE_FORMULA"
---             }
---         }
---     ]
---   | true = []
+updateSums endIndex =
+  [
+    pairsToJson
+      [
+        "repeatCell" `Tuple` pairsToJson
+          [
+            (
+              "range" `Tuple` pairsToJson
+                [
+                  ("sheetId" `Tuple` intToJson 0),
+                  ("startRowIndex" `Tuple` intToJson 1),
+                  ("endRowIndex" `Tuple` intToJson endIndex),
+                  ("startColumnIndex" `Tuple` intToJson 7),
+                  ("endColumnIndex" `Tuple` intToJson 7)
+                ]
+            ),
+            (
+              "cell" `Tuple` pairsToJson
+                [
+                  "userEnteredValue" `Tuple` pairsToJson
+                    [
+                      "formulaValue" `Tuple` J.fromString "=SUM(D2:G2)"
+                    ]
+                ]
+            ),
+            ("fields" `Tuple` J.fromString "userEnteredValue")
+          ]
+      ]
+  ]
 
 -- createBatchResource ::
 --   Array (Array String) ->
@@ -206,7 +207,8 @@ createBatchResource tableFromSheet tableFromEmail joinedTables =
     requests = concat
       [
         (fitRows startIndex endIndex),
-        (updateCells joinedTables)
+        (updateCells joinedTables),
+        (updateSums endIndex)
       ]
 
 updateSheet client message =
