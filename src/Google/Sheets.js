@@ -14,9 +14,6 @@ exports.getValues = function(options) {
 
 exports.batchUpdate = function(options) {
   return function(success, error) {
-    console.log('-------------');
-    console.log(options.resource.requests[2].repeatCell);
-    console.log('-------------');
     sheets.spreadsheets.batchUpdate(options, function(err) {
       if (err) {
         error(err);

@@ -177,7 +177,7 @@ updateSums endIndex =
                   ("startRowIndex" `Tuple` intToJson 1),
                   ("endRowIndex" `Tuple` intToJson endIndex),
                   ("startColumnIndex" `Tuple` intToJson 7),
-                  ("endColumnIndex" `Tuple` intToJson 7)
+                  ("endColumnIndex" `Tuple` intToJson 8)
                 ]
             ),
             (
