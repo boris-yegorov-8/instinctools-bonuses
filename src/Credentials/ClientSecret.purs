@@ -1,13 +1,17 @@
 module Credentials.ClientSecret (ClientSecret(..), ClientSecretObject) where
 
-import Data.Array (head, fold)
+import Data.Array (head)
 import Data.Maybe (fromMaybe)
-import Control.Bind (bind, (>=>))
-import Data.Function (($), (#))
+import Control.Bind (bind, (>>=))
+import Data.Function (($))
 import Data.Show (class Show)
-import Data.Foreign.Index (prop)
-import Data.Foreign.Class (class IsForeign, readProp)
+import Data.Foreign.Index ((!))
+import Data.Foreign.Class (class Decode)
 import Control.Applicative (pure)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
+import Data.Foreign (readString, readArray)
+import Data.Traversable (traverse)
 
 type ClientSecretObject = {
   clientId :: String,
@@ -17,22 +21,16 @@ type ClientSecretObject = {
 
 data ClientSecret = ClientSecret ClientSecretObject
 
-instance showFoo :: Show ClientSecret where
-  show (ClientSecret o) = fold [
-      "(Credentials { clientId: ",
-      o.clientId,
-      ", clientSecret: ",
-      o.clientSecret,
-      ", redirectUri: ",
-      o.redirectUri,
-      " })"
-    ]
+derive instance genericClientSecret :: Generic ClientSecret _
 
-instance fooIsForeign :: IsForeign ClientSecret where
-  read value = do
-    clientId <- value # (prop "installed" >=> readProp "client_id")
-    clientSecret <- value # (prop "installed" >=> readProp "client_secret")
-    redirectUris <- value # (prop "installed" >=> readProp "redirect_uris")
+instance showClientSecret :: Show ClientSecret where
+  show = genericShow
+
+instance decodeClientSecret :: Decode ClientSecret where
+  decode value = do
+    clientId <- value ! "installed" ! "client_id" >>= readString
+    clientSecret <- value ! "installed" ! "client_secret" >>= readString
+    redirectUris <- value ! "installed" ! "redirect_uris" >>= readArray >>= (traverse readString)
     pure $ ClientSecret {
       clientId,
       clientSecret,

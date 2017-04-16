@@ -8,11 +8,12 @@ module Auth (
   getToken
 ) where
 
+import Control.Monad.Eff (kind Effect)
 import Data.Argonaut.Core (Json)
 import Credentials.Token (TokenObject)
 import Control.Monad.Aff (Aff)
 
-foreign import data Oauth2Client :: *
+foreign import data Oauth2Client :: Type
 
 type Options = {
   clientId :: String,
@@ -20,7 +21,7 @@ type Options = {
   redirectUri :: String
 }
 
-foreign import data AuthEff :: !
+foreign import data AuthEff :: Effect
 
 foreign import createClient :: Options -> Oauth2Client
 

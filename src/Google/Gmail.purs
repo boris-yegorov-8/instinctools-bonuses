@@ -4,12 +4,13 @@ module Google.Gmail (
   getMessage
 ) where
 
+import Control.Monad.Eff (kind Effect)
 import Control.Monad.Aff (Aff)
 import Data.Argonaut.Core (Json)
 
 import Auth (Oauth2Client)
 
-foreign import data GmailEff :: !
+foreign import data GmailEff :: Effect
 
 foreign import getMessages :: forall eff.
   { auth :: Oauth2Client, userId :: String, q :: String } ->

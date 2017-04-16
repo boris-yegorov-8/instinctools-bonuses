@@ -7,7 +7,7 @@ import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), either)
 import Data.Foreign (F)
-import Data.Foreign.Class (readJSON)
+import Data.Foreign.Generic (genericDecodeJSON)
 import Data.Function (($))
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
@@ -59,7 +59,7 @@ refreshToken client =
     (either
       (throwError "Wrong new token")
       pure
-      (runExcept $ readJSON tokenString :: F Token)))
+      (runExcept $ genericDecodeJSON tokenString :: F Token)))
   where
     promptMessage = "Authorize this app by visiting this url: " <>
       Auth.generateAuthUrl client tokenOptions
@@ -77,7 +77,7 @@ getToken :: forall e.
 getToken client =
   attempt (
     (readTextFile UTF8 tokenPath) >>=
-    (\content -> pure $ runExcept $ readJSON content :: F Token)
+    (\content -> pure $ runExcept $ genericDecodeJSON content :: F Token)
   ) >>=
   (\result -> case result of
     Right (Right token) -> pure token

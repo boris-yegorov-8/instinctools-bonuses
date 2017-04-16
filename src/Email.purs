@@ -9,9 +9,11 @@ import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Data.Array (last, filter, head)
 import Data.Either (either)
-import Data.Foreign (F)
-import Data.Foreign.Class (class IsForeign, readProp, readJSON)
-import Data.Foreign.Index (prop, index)
+import Data.Foreign (F, readString)
+import Data.Foreign.Class (class Decode)
+import Data.Foreign.Generic (genericDecodeJSON)
+import Data.Foreign.Lens (prop)
+import Data.Foreign.Index ((!))
 import Data.Function (flip, ($))
 import Data.Functor ((<$>))
 import Data.Maybe (maybe', fromMaybe)
@@ -24,6 +26,8 @@ import Data.String.Regex.Unsafe (unsafeRegex)
 import Data.String.Regex.Flags as RegexFlags
 import Data.String.Regex as Regex
 import Control.Monad.Eff.Exception (EXCEPTION)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 
 import Auth (Oauth2Client)
 import Google.Gmail as Gmail
@@ -32,17 +36,15 @@ import Constants (userId)
 
 data Message = Message String
 
-instance showMessage :: Show Message where
-  show (Message m) = m
+derive instance genericMessage :: Generic Message _
 
-instance messageIsForeign :: IsForeign Message where
-  read =
-    (prop "payload") >=>
-    (prop "parts") >=>
-    (index 0) >=>
-    (prop "body") >=>
-    (readProp "data") >=>
-    (pure <<< Message)
+instance showMessage :: Show Message where
+  show = genericShow
+
+instance messageDecode :: Decode Message where
+  decode value = do
+    message <- value ! "payload" ! "parts" ! 0 ! "body" ! "data" >>= readString
+    pure $ Message message
 
 changeStringEncoding :: forall e.
   Encoding -> Encoding -> String -> Eff (buffer :: BUFFER | e) String
@@ -96,7 +98,7 @@ getMessage client =
     (\content -> either
       (throwError "Failed to parse the content of the email ")
       (liftEff <<< parseContent <<< show)
-      (runExcept $ readJSON (show content) :: F Message)))
+      (runExcept $ genericDecodeJSON (show content) :: F Message)))
   where
     gmailOptions = {
       auth: client,

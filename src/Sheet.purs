@@ -19,7 +19,9 @@ import Data.Array (
 import Data.Either (either)
 import Data.Eq ((==))
 import Data.Foreign (F)
-import Data.Foreign.Class (class IsForeign, readProp, readJSON)
+import Data.Foreign.Index (readProp)
+import Data.Foreign.Class (class Decode)
+import Data.Foreign.Generic (genericDecodeJSON)
 import Data.Function (($))
 import Data.Functor ((<#>), (<$>))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -45,8 +47,8 @@ data Values = Values (Array (Array String))
 instance showValues :: Show Values where
   show (Values v) = show v
 
-instance valuesIsForeign :: IsForeign Values where
-  read = (readProp "values") >=> (pure <<< Values)
+instance valuesDecode :: Decode Values where
+  decode = (readProp "values") >=> (pure <<< Values)
 
 joinTables ::
   Array (Array String) ->
@@ -254,4 +256,4 @@ updateSheet client message =
   )
   where
     options = { auth: client, spreadsheetId: sheetId, range: "" }
-    parseValues content = runExcept $ readJSON (show content) :: F Values
+    parseValues content = runExcept $ genericDecodeJSON (show content) :: F Values
