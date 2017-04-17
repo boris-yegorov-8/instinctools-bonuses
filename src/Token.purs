@@ -1,13 +1,11 @@
 module Token (getToken) where
 
 import Control.Applicative (pure)
-import Control.Bind ((>>=))
+import Control.Bind ((>>=), (=<<))
 import Control.Monad.Aff (Aff, attempt, forkAff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), either)
-import Data.Foreign (F)
-import Data.Foreign.Generic (genericDecodeJSON)
 import Data.Function (($))
 import Node.Encoding (Encoding(..))
 import Node.FS (FS)
@@ -27,9 +25,10 @@ import Data.Show (show)
 import Control.Monad.Eff.Exception (EXCEPTION)
 
 import Auth as Auth
-import Credentials.Token (Token)
+import Credentials.Token (Token, readToken)
 import Constants (tokenPath, tokenOptions)
-import Util (throwWrappedError, throwError)
+import Util (throwError)
+import JsonParser (toForeign)
 
 refreshToken :: forall e.
   Auth.Oauth2Client -> Aff
@@ -38,6 +37,7 @@ refreshToken :: forall e.
     , getToken :: Auth.AuthEff
     , err :: EXCEPTION
     , fs :: FS
+    , exception :: EXCEPTION
     | e
     )
     Token
@@ -50,16 +50,12 @@ refreshToken client =
     (\code -> close interface *> pure code)
   ) >>=
   (attempt <<< Auth.getToken client) >>=
-  (either
-    (throwWrappedError "Getting new token failed: ")
-    (pure <<< show)
-  ) >>=
-  (\tokenString ->
-    (forkAff $ writeTextFile UTF8 tokenPath tokenString) *>
+  (\token ->
+    (forkAff $ writeTextFile UTF8 tokenPath $ show token) *>
     (either
       (throwError "Wrong new token")
       pure
-      (runExcept $ genericDecodeJSON tokenString :: F Token)))
+      (runExcept $ readToken =<< toForeign (show token))))
   where
     promptMessage = "Authorize this app by visiting this url: " <>
       Auth.generateAuthUrl client tokenOptions
@@ -71,13 +67,14 @@ getToken :: forall e.
     , getToken :: Auth.AuthEff
     , err :: EXCEPTION
     , fs :: FS
+    , exception :: EXCEPTION
     | e
     )
     Token
 getToken client =
   attempt (
     (readTextFile UTF8 tokenPath) >>=
-    (\content -> pure $ runExcept $ genericDecodeJSON content :: F Token)
+    (\content -> pure $ runExcept $ readToken =<< toForeign content)
   ) >>=
   (\result -> case result of
     Right (Right token) -> pure token

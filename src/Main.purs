@@ -30,6 +30,7 @@ main :: forall e.
     , getMessages :: GmailEff
     , buffer :: BUFFER
     , getValues :: GoogleSheetsEff
+    , exception :: EXCEPTION
     | e
     )
     (Canceler
@@ -41,6 +42,7 @@ main :: forall e.
        , getMessages :: GmailEff
        , buffer :: BUFFER
        , getValues :: GoogleSheetsEff
+       , exception :: EXCEPTION
        | e
        )
     )
