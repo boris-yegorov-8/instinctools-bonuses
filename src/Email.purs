@@ -2,16 +2,15 @@ module Email (Message(..), getMessage) where
 
 import Node.Buffer as Buffer
 import Control.Applicative (pure)
-import Control.Bind ((>>=), (>=>))
+import Control.Bind (bind, (>>=), (=<<), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
 import Data.Array (last, filter, head)
 import Data.Either (either)
-import Data.Foreign (F)
-import Data.Foreign.Class (class IsForeign, readProp, readJSON)
-import Data.Foreign.Index (prop, index)
+import Data.Foreign (F, Foreign, readString)
+import Data.Foreign.Index ((!))
 import Data.Function (flip, ($))
 import Data.Functor ((<$>))
 import Data.Maybe (maybe', fromMaybe)
@@ -29,20 +28,17 @@ import Auth (Oauth2Client)
 import Google.Gmail as Gmail
 import Util (throwWrappedError, throwError)
 import Constants (userId)
+import JsonParser (toForeign)
 
 data Message = Message String
 
 instance showMessage :: Show Message where
   show (Message m) = m
 
-instance messageIsForeign :: IsForeign Message where
-  read =
-    (prop "payload") >=>
-    (prop "parts") >=>
-    (index 0) >=>
-    (prop "body") >=>
-    (readProp "data") >=>
-    (pure <<< Message)
+readMessage :: Foreign -> F Message
+readMessage value = do
+  message <- value ! "payload" ! "parts" ! 0 ! "body" ! "data" >>= readString
+  pure $ Message message
 
 changeStringEncoding :: forall e.
   Encoding -> Encoding -> String -> Eff (buffer :: BUFFER | e) String
@@ -61,7 +57,7 @@ parseLine line =
 
 parseContent :: forall e.
   String ->
-  Eff( buffer :: BUFFER, err :: EXCEPTION | e) (Array (Array String))
+  Eff( buffer :: BUFFER, err :: EXCEPTION, exception :: EXCEPTION | e) (Array (Array String))
 parseContent =
   (changeStringEncoding Base64 UTF8) >=>
   (
@@ -79,7 +75,7 @@ parseContent =
 getMessage :: forall e.
   Oauth2Client ->
   Aff
-    (getMessages :: Gmail.GmailEff, err :: EXCEPTION, buffer :: BUFFER | e)
+    (getMessages :: Gmail.GmailEff, err :: EXCEPTION, buffer :: BUFFER, exception :: EXCEPTION | e)
     (Array (Array String))
 getMessage client =
   (attempt $ Gmail.getMessages gmailOptions) >>=
@@ -96,7 +92,7 @@ getMessage client =
     (\content -> either
       (throwError "Failed to parse the content of the email ")
       (liftEff <<< parseContent <<< show)
-      (runExcept $ readJSON (show content) :: F Message)))
+      (runExcept $ readMessage =<< toForeign (show content))))
   where
     gmailOptions = {
       auth: client,

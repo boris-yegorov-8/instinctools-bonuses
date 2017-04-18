@@ -1,11 +1,11 @@
-module Credentials.Token (Token(..), TokenObject) where
+module Credentials.Token (Token(..), TokenObject, readToken) where
 
-import Data.Array (fold)
-import Data.Show (class Show, show)
-import Data.Foreign.Class (class IsForeign, readProp)
+import Data.Show (class Show)
 import Control.Applicative (pure)
 import Data.Function (($))
-import Control.Bind (bind)
+import Control.Bind (bind, (>>=))
+import Data.Foreign.Index ((!))
+import Data.Foreign (F, Foreign, readString, readNumber)
 
 type TokenObject = {
   access_token :: String,
@@ -16,23 +16,10 @@ type TokenObject = {
 
 data Token = Token TokenObject
 
-instance showToken :: Show Token where
-  show (Token o) = fold [
-      "(Token { access_token: ",
-      o.access_token,
-      ", refresh_token: ",
-      o.refresh_token,
-      ", token_type: ",
-      o.token_type,
-      ", expiry_date: ",
-      show o.expiry_date,
-      " })"
-    ]
-
-instance tokenIsForeign :: IsForeign Token where
-  read value = do
-    access_token <- readProp "access_token" value
-    refresh_token <- readProp "refresh_token" value
-    token_type <- readProp "token_type" value
-    expiry_date <- readProp "expiry_date" value
-    pure $ Token { access_token, refresh_token, token_type, expiry_date }
+readToken :: Foreign -> F Token
+readToken value = do
+  access_token <- value ! "access_token" >>= readString
+  refresh_token <- value ! "refresh_token" >>= readString
+  token_type <- value ! "token_type" >>= readString
+  expiry_date <- value ! "expiry_date" >>= readNumber
+  pure $ Token { access_token, refresh_token, token_type, expiry_date }

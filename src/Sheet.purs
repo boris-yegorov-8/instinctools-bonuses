@@ -2,7 +2,7 @@ module Sheet (Values(..), updateSheet) where
 
 import Constants (sheetId)
 import Control.Applicative (pure)
-import Control.Bind ((>>=), (>=>))
+import Control.Bind (bind, (>>=), (=<<), (>=>))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (runExcept)
 import Control.Semigroupoid ((<<<))
@@ -18,12 +18,12 @@ import Data.Array (
 )
 import Data.Either (either)
 import Data.Eq ((==))
-import Data.Foreign (F)
-import Data.Foreign.Class (class IsForeign, readProp, readJSON)
+import Data.Foreign (F, Foreign, readArray, readString)
+import Data.Foreign.Index ((!))
 import Data.Function (($))
 import Data.Functor ((<#>), (<$>))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Show (class Show, show)
+import Data.Show (show)
 import Data.String (localeCompare)
 import Data.Ord ((>), (<))
 import Data.Ring ((-))
@@ -35,18 +35,20 @@ import Data.Argonaut.Core (Json)
 import Data.Int as I
 import Control.Monad.Eff.Exception (EXCEPTION)
 import Data.Unit (Unit)
+import Data.Traversable (traverse)
 
 import Google.Sheets as GS
 import Util (throwWrappedError, throwError)
 import Auth (Oauth2Client)
+import JsonParser (toForeign)
 
 data Values = Values (Array (Array String))
 
-instance showValues :: Show Values where
-  show (Values v) = show v
-
-instance valuesIsForeign :: IsForeign Values where
-  read = (readProp "values") >=> (pure <<< Values)
+readValues :: Foreign -> F Values
+readValues v = do
+  result <- v ! "values" >>=
+    (readArray >=> traverse (readArray >=> traverse readString))
+  pure $ Values result
 
 joinTables ::
   Array (Array String) ->
@@ -215,7 +217,7 @@ createBatchResource tableFromSheet tableFromEmail joinedTables =
 updateSheet :: forall e.
   Oauth2Client ->
   Array (Array String) ->
-  Aff (getValues :: GS.GoogleSheetsEff, err :: EXCEPTION| e) Unit
+  Aff (getValues :: GS.GoogleSheetsEff, err :: EXCEPTION, exception :: EXCEPTION | e) Unit
 updateSheet client message =
   (attempt $ GS.getValues $ options { range = "Sheet1!A1:I" }) >>=
   (either
@@ -254,4 +256,4 @@ updateSheet client message =
   )
   where
     options = { auth: client, spreadsheetId: sheetId, range: "" }
-    parseValues content = runExcept $ readJSON (show content) :: F Values
+    parseValues content = runExcept $ readValues =<< toForeign (show content)
