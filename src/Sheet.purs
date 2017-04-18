@@ -20,11 +20,10 @@ import Data.Either (either)
 import Data.Eq ((==))
 import Data.Foreign (F, Foreign, readArray, readString)
 import Data.Foreign.Index ((!))
-import Data.Foreign.Class (class Decode)
 import Data.Function (($))
 import Data.Functor ((<#>), (<$>))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Show (class Show, show)
+import Data.Show (show)
 import Data.String (localeCompare)
 import Data.Ord ((>), (<))
 import Data.Ring ((-))
@@ -45,13 +44,10 @@ import JsonParser (toForeign)
 
 data Values = Values (Array (Array String))
 
-readFoo a = do
-  result <- readArray a >>= traverse readString
-  pure result
-
 readValues :: Foreign -> F Values
 readValues v = do
-  result <- v ! "values" >>= readArray >>= traverse readFoo
+  result <- v ! "values" >>=
+    (readArray >=> traverse (readArray >=> traverse readString))
   pure $ Values result
 
 joinTables ::
