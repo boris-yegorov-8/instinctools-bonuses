@@ -50,6 +50,7 @@ refreshToken client =
     (\code -> close interface *> pure code)
   ) >>=
   (attempt <<< Auth.getToken client) >>=
+  (either (throwError "Wrong new token") pure) >>=
   (\token ->
     (forkAff $ writeTextFile UTF8 tokenPath $ show token) *>
     (either
